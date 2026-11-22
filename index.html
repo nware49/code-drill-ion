@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Code Drillion</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A daily trivia drill for software engineers. The obvious answer is worth 10 points. The deep cut only you would think of is worth 100.">
+<meta name="drill:share-url" content="">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315181d'/%3E%3Cpath d='M13 4h6v6l-6 3zM13 15l6-3v5l-6 3zM13 22l6-3v3l-3 7-3-7z' fill='%23ffb94c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <button class="brand" id="brand" type="button" aria-label="Code Drillion, back to the start">
+      <svg class="bit" viewBox="0 0 12 26" aria-hidden="true"><path d="M3 0h6v6L3 9zM3 11l6-3v5l-6 3zM3 18l6-3v3l-3 8-3-8z"/></svg>
+      <span class="wordmark">code<span>drillion</span></span>
+    </button>
+    <nav class="top-actions" aria-label="Game menu">
+      <button type="button" class="chip-btn" id="open-help">How to play</button>
+      <button type="button" class="chip-btn" id="open-stats">Stats</button>
+      <button type="button" class="chip-btn square" id="toggle-theme" aria-label="Color theme: follow system" title="Color theme">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- HOME ------------------------------------------------------------ -->
+    <section id="view-home" class="view home" aria-labelledby="home-title">
+      <div class="home-grid">
+        <div class="home-copy">
+          <p class="eyebrow" id="home-meta">The daily drill</p>
+          <h1 id="home-title" class="hero-title">Drill below the <span class="caret" aria-hidden="true"></span><span class="ghost">autocomplete.</span></h1>
+          <p class="lede">Seven prompts. Thirty seconds each. Name anything that fits. The answer everyone gives is worth 10 points. The one only you would think of is worth 100.</p>
+          <div class="cta">
+            <button class="btn primary" id="start-daily" type="button">Start today&rsquo;s drill</button>
+            <button class="btn" id="start-practice" type="button">Practice drill</button>
+          </div>
+          <p class="cta-note" id="home-status" aria-live="polite"></p>
+
+          <ol class="rules">
+            <li><b>Type any valid answer.</b> Wrong guesses only cost time. Case, punctuation and small typos don&rsquo;t matter.</li>
+            <li><b>Rarer answers drill deeper.</b> Each answer sits in a layer of the stack, from autocomplete down to ring &minus;3.</li>
+            <li><b>Every answer works once per drill.</b> Use one twice and you get a use-after-free.</li>
+            <li><b>The seventh prompt is root.</b> It has exactly one right answer, worth 100. Hope you didn&rsquo;t spend it earlier.</li>
+          </ol>
+        </div>
+
+        <figure class="ladder" aria-labelledby="ladder-cap">
+          <figcaption id="ladder-cap" class="ladder-cap"><span>Layer</span><span>Points</span></figcaption>
+          <div class="ladder-body">
+            <div class="shaft" aria-hidden="true"><i></i><svg class="bit" viewBox="0 0 12 26"><path d="M3 0h6v6L3 9zM3 11l6-3v5l-6 3zM3 18l6-3v3l-3 8-3-8z"/></svg></div>
+            <ol class="strata">
+              <li class="stratum t0"><span class="s-name">autocomplete</span><span class="s-sub">What everyone, and every model, says first.</span><span class="s-pts">10</span></li>
+              <li class="stratum t1"><span class="s-name">ring 3 <em>userland</em></span><span class="s-sub">Solid working knowledge.</span><span class="s-pts">25</span></li>
+              <li class="stratum t2"><span class="s-name">ring 0 <em>kernel</em></span><span class="s-sub">You&rsquo;ve shipped it and read the docs.</span><span class="s-pts">40</span></li>
+              <li class="stratum t3"><span class="s-name">ring &minus;1 <em>hypervisor</em></span><span class="s-sub">Specialist knowledge.</span><span class="s-pts">60</span></li>
+              <li class="stratum t4"><span class="s-name">ring &minus;2 <em>SMM</em></span><span class="s-sub">You were there, or you read the postmortem.</span><span class="s-pts">80</span></li>
+              <li class="stratum t5"><span class="s-name">ring &minus;3 <em>ME</em></span><span class="s-sub">Below everything. Nobody expects it.</span><span class="s-pts">100</span></li>
+            </ol>
+          </div>
+          <p class="ladder-foot">Six prompts at up to 100 each, plus root: a perfect drill reaches depth <b>700</b>, or <code>0x2BC</code>.</p>
+        </figure>
+      </div>
+
+      <section class="why" aria-labelledby="why-title">
+        <h2 id="why-title">Why this exists</h2>
+        <div class="why-cols">
+          <p>A language model is built to produce the most probable next token. Ask one to name a sorting algorithm and you&rsquo;ll hear quicksort, every time. That&rsquo;s the autocomplete layer, and here it&rsquo;s worth 10 points.</p>
+          <p>Everything below it comes from somewhere else: the outage you were paged for, the RFC you read for fun, the man page you actually finished, the codebase you inherited and came to understand. That knowledge still matters. It&rsquo;s how you tell when generated code is wrong, and it&rsquo;s what this game scores.</p>
+        </div>
+        <p class="why-note" id="bank-note">Answers are checked against a hand-built bank, and every answer carries a line of history. Rarity is editorial: ranked by hand by how unlikely an engineer, or a model, would be to say it first.</p>
+      </section>
+    </section>
+
+    <!-- PLAY ------------------------------------------------------------ -->
+    <section id="view-play" class="view play" hidden aria-label="Drill in progress">
+      <aside class="core" aria-label="Depth so far">
+        <div class="core-read">
+          <span class="label">Depth</span>
+          <strong class="core-num" id="depth-num">0</strong>
+          <code class="core-hex" id="depth-hex">0x000</code>
+        </div>
+        <div class="core-tube" id="core-tube" role="img" aria-label="No depth yet"></div>
+        <ol class="core-cells" id="core-cells"></ol>
+      </aside>
+
+      <div class="console">
+        <div class="console-head">
+          <span class="label" id="q-count">Prompt 1 of 7</span>
+          <span class="tag" id="q-cat"></span>
+          <span class="clock" id="q-clock"><span id="q-secs">30</span>s</span>
+        </div>
+        <div class="timebar" aria-hidden="true"><i id="timebar-fill"></i></div>
+
+        <p class="root-flag" id="root-flag" hidden>Root prompt. Exactly one right answer, worth 100.</p>
+        <h2 class="prompt" id="q-text">Name a sorting algorithm.</h2>
+        <p class="prompt-hint" id="q-hint"></p>
+
+        <div id="answer-zone" class="answer-zone">
+          <ol class="log" id="log" aria-live="polite"></ol>
+          <form class="shell" id="answer-form" autocomplete="off" novalidate>
+            <label class="ps1" for="answer"><span class="sr">Your answer</span><span aria-hidden="true">$</span></label>
+            <input id="answer" name="answer" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" maxlength="80">
+            <button class="btn primary small" type="submit">Enter</button>
+          </form>
+          <div class="console-foot">
+            <button class="btn ghost small" id="pass-btn" type="button">Pass for 0</button>
+            <div class="freed" id="freed" hidden><span class="label">Spent</span><span id="freed-list"></span></div>
+          </div>
+        </div>
+
+        <div class="reveal" id="reveal" hidden tabindex="-1"></div>
+      </div>
+    </section>
+
+    <!-- RESULTS --------------------------------------------------------- -->
+    <section id="view-results" class="view results" hidden aria-labelledby="res-rank">
+      <div class="res-top">
+        <div class="res-head">
+          <p class="eyebrow" id="res-label">Drill complete</p>
+          <p class="res-depth"><strong id="res-num">0</strong><span class="res-of">/ 700</span><code id="res-hex">0x000</code></p>
+          <h2 class="res-rank" id="res-rank">Surface dweller</h2>
+          <p class="res-line" id="res-line"></p>
+          <p class="res-vs" id="res-vs"></p>
+        </div>
+        <div class="share">
+          <pre class="share-text" id="share-text"></pre>
+          <div class="share-row">
+            <button class="btn primary" id="share-btn" type="button">Copy result</button>
+            <span class="share-status" id="share-status" role="status"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="res-core" id="res-core"></div>
+      <ol class="recap" id="recap"></ol>
+
+      <div class="res-foot">
+        <p class="next-drill" id="next-drill"></p>
+        <div class="cta">
+          <button class="btn" id="res-practice" type="button">Practice drill</button>
+          <button class="btn ghost" id="res-home" type="button">Home</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p id="foot-note">Code Drillion. A hand-built answer bank; rarity is ranked by hand, not measured.</p>
+    <p><a id="suggest-link" href="https://github.com/nware49/code-drill-ion/issues/new" target="_blank" rel="noopener">Suggest an answer</a></p>
+  </footer>
+</div>
+
+<!-- DIALOGS ------------------------------------------------------------ -->
+<dialog class="dlg" id="dlg-help" aria-labelledby="help-title">
+  <div class="dlg-head"><h2 id="help-title">How to play</h2><button class="x" type="button" data-close aria-label="Close">&times;</button></div>
+  <div class="dlg-body">
+    <p>Every day brings seven prompts, the same for everyone. Each one asks you to name something: a sorting algorithm, a port, an RFC, a Turing laureate. You get thirty seconds.</p>
+    <ul class="help-list">
+      <li>Any valid answer counts. Wrong guesses cost nothing but time.</li>
+      <li>Rarer answers score more. The obvious one sits in the <b>autocomplete</b> layer and earns 10. Deep cuts reach <b>ring &minus;3</b> and earn 100.</li>
+      <li>Each answer can be used once per drill, across all seven prompts. Typing one again is a <b>use-after-free</b>.</li>
+      <li>The seventh prompt is <b>root</b>: one right answer, worth 100. It is usually the famous answer to an earlier prompt.</li>
+      <li>Passing scores 0 and moves on. After every prompt you&rsquo;ll see the deepest answers you could have given.</li>
+    </ul>
+    <h3>Layers</h3>
+    <ol class="mini-ladder" id="help-ladder"></ol>
+    <h3>Settings</h3>
+    <label class="toggle" for="opt-extended"><input type="checkbox" id="opt-extended"><span>Extended time: 45 seconds per prompt</span></label>
+    <p class="fine">Your streak and stats stay in this browser. Nothing is sent anywhere.</p>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="dlg-stats" aria-labelledby="stats-title">
+  <div class="dlg-head"><h2 id="stats-title">Stats</h2><button class="x" type="button" data-close aria-label="Close">&times;</button></div>
+  <div class="dlg-body">
+    <dl class="kpis" id="kpis"></dl>
+    <h3>Where your answers landed</h3>
+    <div id="tier-dist"></div>
+    <h3>Past drills</h3>
+    <p class="fine">Replays are unscored and don&rsquo;t touch your streak.</p>
+    <ol class="archive" id="archive"></ol>
+  </div>
+</dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
