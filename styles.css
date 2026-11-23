@@ -377,6 +377,18 @@ main { flex: 1; }
 .log .typed::before { content: '$ '; color: var(--ink-3); }
 .log .msg { color: var(--ink-2); }
 .log .burned .msg { color: var(--alarm); }
+.log .suggest {
+  font: 600 0.85rem var(--f-mono);
+  color: var(--ink);
+  background: var(--raise);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin: 0 2px;
+  cursor: pointer;
+}
+.log .suggest:hover { border-color: var(--ink-3); }
+.hit-note code { font-size: 0.88em; color: var(--ink); }
 .log .msg a { color: var(--ink-2); }
 @keyframes fadein { from { opacity: 0; transform: translateY(2px); } }
 

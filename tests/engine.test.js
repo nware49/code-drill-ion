@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   normalize, digitsOf, editDistance, compilePrompt, compileTrap, judge, dailyPlan, practicePlan,
   materialize, dayNumber, dateForDay, shareText, depthOf, hex, rankFor, MAX_DEPTH, TIERS, PER_DRILL, autocompleteDepth,
-  kmFor, fmtKm, layerAt, EARTH_RADIUS_KM,
+  kmFor, fmtKm, layerAt, EARTH_RADIUS_KM, rng,
 } from '../js/engine.js';
 import { BANK } from '../js/bank/index.js';
 
@@ -126,6 +126,44 @@ test('judge: fuzzy matching corrects small typos only', () => {
   assert.equal(judge(P('sorting'), 'zzzzzzzz').status, 'miss');
   // digits must agree, so SHA-2 never autocorrects to SHA-1 or SHA-3
   assert.equal(judge(P('hashes'), 'sha-7').status, 'miss');
+});
+
+test('judge: filler words around an answer are dropped on a second pass', () => {
+  assert.equal(judge(P('dead-html'), 'noembed tag').answer.n, '<noembed>');
+  assert.equal(judge(P('dead-html'), '<noembed> element').answer.n, '<noembed>');
+  assert.equal(judge(P('dead-html'), 'noembed tag').corrected, true);
+  assert.equal(judge(P('two-letter'), 'the ls command').answer.n, 'ls');
+  assert.equal(judge(P('signals'), 'SIGKILL signal').answer.n, 'SIGKILL');
+  assert.equal(judge(P('sorting'), 'quicksort').corrected, false, 'clean input is not marked corrected');
+});
+
+test('judge: near misses get "did you mean" suggestions, never a silent accept', () => {
+  const partial = judge(P('dead-html'), 'noemb');
+  assert.equal(partial.status, 'suggest');
+  assert.deepEqual(partial.suggestions.map((a) => a.n), ['<noembed>']);
+  const twoTypos = judge(P('dead-html'), 'nombde');
+  assert.equal(twoTypos.status, 'suggest');
+  assert.equal(twoTypos.suggestions[0].n, '<noembed>');
+  assert.ok(judge(P('dead-html'), 'nombde').suggestions.length <= 2);
+  assert.equal(judge(P('dead-html'), 'qwertyuiop').status, 'miss');
+  assert.equal(judge(P('ports'), '2222').status, 'miss', 'numbers never get suggestions');
+  const noembed = judge(P('dead-html'), 'noembed').answer;
+  const spent = judge(P('dead-html'), 'noemb', new Map([[noembed.key, { q: 1, name: '<noembed>' }]]));
+  assert.notEqual(spent.status === 'suggest' && spent.suggestions.some((a) => a.n === '<noembed>'), true, 'spent answers are not suggested');
+});
+
+test('judge: random junk is never accepted on any prompt', () => {
+  const rand = rng('junk');
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  for (const p of [...PROMPTS, ...PROMPTS.flatMap((x) => x.traps.map((_, i) => compileTrap(x, i)))]) {
+    for (let k = 0; k < 120; k++) {
+      let w = '';
+      const len = 5 + Math.floor(rand() * 8);
+      for (let i = 0; i < len; i++) w += letters[Math.floor(rand() * 26)];
+      const r = judge(p, w);
+      assert.notEqual(r.status, 'hit', `${p.id}: "${w}" was accepted as ${r.answer?.n}`);
+    }
+  }
 });
 
 test('judge: numeric prompts read the number', () => {

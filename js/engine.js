@@ -172,13 +172,73 @@ export function compileTrap(prompt, trapIndex) {
   };
 }
 
+// Words people add around an answer ("noembed tag", "ls command", "quicksort algorithm").
+// They are only dropped on a second pass, after the input failed to match as typed.
+export const FILLER_WORDS = [
+  'the', 'a', 'an', 'tag', 'tags', 'element', 'elements', 'html', 'command', 'cmd', 'keyword', 'module',
+  'package', 'library', 'lib', 'framework', 'algorithm', 'algo', 'protocol', 'language', 'lang', 'pattern',
+  'attack', 'vulnerability', 'law', 'rule', 'database', 'db', 'engine', 'editor', 'ide', 'distro',
+  'distribution', 'service', 'function', 'cipher', 'computer', 'machine', 'bug', 'outage', 'signal',
+  'instruction', 'set', 'isa', 'architecture', 'resource', 'kind', 'subcommand',
+];
+const FILLER_RE = new RegExp(`(^|[^a-z0-9])(?:${FILLER_WORDS.join('|')})(?=$|[^a-z0-9])`, 'g');
+const withoutFiller = (input) => String(input ?? '').toLowerCase().replace(FILLER_RE, '$1 ');
+
+/** Closest answers to a typed form within `limit` edits. */
+function nearest(prompt, form, limit) {
+  const sig = digitSignature(form);
+  let best = limit + 1;
+  let answers = new Set();
+  for (const [f, list] of prompt.index) {
+    if (digitSignature(f) !== sig || f.length < 4) continue;
+    const dist = editDistance(form, f, limit);
+    if (dist > limit) continue;
+    if (dist < best) { best = dist; answers = new Set(list); }
+    else if (dist === best) list.forEach((a) => answers.add(a));
+  }
+  return { dist: best, answers: [...answers] };
+}
+
+/** Near misses worth offering as "did you mean": a few edits away, or a prefix either way. */
+function suggestionsFor(prompt, forms, burned) {
+  const score = new Map();
+  for (const form of forms) {
+    if (!form || form.length < 4) continue;
+    const loose = form.length >= 11 ? 4 : form.length >= 7 ? 3 : 2;
+    const sig = digitSignature(form);
+    for (const [f, list] of prompt.index) {
+      if (f.length < 4 || digitSignature(f) !== sig) continue;
+      let d = editDistance(form, f, loose);
+      if (d > loose) {
+        if (f.startsWith(form) || (f.length >= 5 && form.startsWith(f))) d = loose;
+        else continue;
+      }
+      for (const a of list) {
+        if (burned.has(a.key)) continue;
+        if (!score.has(a) || d < score.get(a)) score.set(a, d);
+      }
+    }
+  }
+  const seen = new Set();
+  return [...score].sort((x, y) => x[1] - y[1])
+    .map(([a]) => a)
+    .filter((a) => !seen.has(a.key) && seen.add(a.key))
+    .slice(0, 2);
+}
+
 /**
  * Check a typed answer against a prompt.
- * burned: Map(answerKey -> prompt number where it was spent).
- * Returns { status: 'hit' | 'burned' | 'nope' | 'miss' | 'empty', answer?, corrected?, at?, message? }
+ * burned: Map(answerKey -> where it was spent).
+ * Returns { status, answer?, corrected?, at?, message?, suggestions? } where status is
+ *   'hit'      accepted (corrected: true when a typo or filler word was fixed)
+ *   'burned'   a valid answer that was already spent (use-after-free)
+ *   'nope'     a known wrong answer, with a reason
+ *   'suggest'  close to an answer but not close enough to accept: offer "did you mean"
+ *   'miss' | 'empty'
  */
 export function judge(prompt, input, burned = new Map()) {
-  const form = prompt.numeric ? digitsOf(input) : normalize(input, prompt.strip, prompt.keep);
+  const formOf = (s) => (prompt.numeric ? digitsOf(s) : normalize(s, prompt.strip, prompt.keep));
+  const form = formOf(input);
   if (!form) return { status: 'empty' };
 
   const resolve = (cands, corrected) => {
@@ -187,26 +247,37 @@ export function judge(prompt, input, burned = new Map()) {
     return { status: 'burned', answer: cands[0], at: burned.get(cands[0].key) };
   };
 
-  const exact = prompt.index.get(form);
-  if (exact) return resolve(exact, false);
-  if (prompt.nope.has(form)) return { status: 'nope', message: prompt.nope.get(form) };
-
-  if (!prompt.numeric && form.length >= 5) {
-    const limit = form.length >= 9 ? 2 : 1;
-    const sig = digitSignature(form);
-    let best = limit + 1;
-    let bestAnswers = new Set();
-    for (const [f, ans] of prompt.index) {
-      if (digitSignature(f) !== sig || f.length < 4) continue;
-      const dist = editDistance(form, f, limit);
-      if (dist < best) { best = dist; bestAnswers = new Set(ans); }
-      else if (dist === best) ans.forEach((a) => bestAnswers.add(a));
+  // Exact, then a known wrong answer, then one or two typos (never for numbers).
+  const attempt = (f, corrected) => {
+    const exact = prompt.index.get(f);
+    if (exact) return resolve(exact, corrected);
+    if (prompt.nope.has(f)) return { status: 'nope', message: prompt.nope.get(f) };
+    if (!prompt.numeric && f.length >= 5) {
+      const near = nearest(prompt, f, f.length >= 9 ? 2 : 1);
+      if (near.answers.length === 1) return resolve(near.answers, true);
     }
-    if (best <= limit && bestAnswers.size === 1) return resolve([...bestAnswers], true);
+    return null;
+  };
+
+  const first = attempt(form, false);
+  if (first) return first;
+
+  let trimmed = '';
+  if (!prompt.numeric) {
+    trimmed = formOf(withoutFiller(input));
+    if (trimmed && trimmed !== form) {
+      const second = attempt(trimmed, true);
+      if (second) return second;
+    }
   }
 
   const globalForm = normalize(input);
   if (GLOBAL_NOPE.has(globalForm)) return { status: 'nope', message: GLOBAL_NOPE.get(globalForm) };
+
+  if (!prompt.numeric) {
+    const suggestions = suggestionsFor(prompt, [form, trimmed], burned);
+    if (suggestions.length) return { status: 'suggest', suggestions };
+  }
   return { status: 'miss' };
 }
 

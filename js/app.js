@@ -278,6 +278,11 @@ function onSubmit(event) {
     addLog(typed, `Use-after-free. You spent ${esc(verdict.at.name)} on prompt ${verdict.at.q}.`, 'burned');
   } else if (verdict.status === 'nope') {
     addLog(typed, esc(verdict.message), 'nope');
+  } else if (verdict.status === 'suggest') {
+    const options = verdict.suggestions
+      .map((a) => `<button type="button" class="suggest" data-suggest="${esc(a.n)}" data-typed="${esc(typed.trim())}">${esc(a.n)}</button>`)
+      .join(' or ');
+    addLog(typed, `Close. Did you mean ${options}?`, 'near');
   } else {
     addLog(typed, `Not in the bank. Try another. ${suggestLink(typed, prompt)}`, 'miss');
   }
@@ -301,7 +306,8 @@ function resolvePrompt(kind, answer, extra = {}) {
   } else {
     const target = prompt.trap ? prompt.answers[0] : null;
     const spentAt = target ? spentMap().get(target.key) : null;
-    result = { status: kind, pts: 0, left: 0, burnedTrap: !!spentAt, spentAt: spentAt?.q ?? null, spentName: spentAt?.name ?? null };
+    const tries = log.map((e) => e.typed.trim()).filter(Boolean);
+    result = { status: kind, pts: 0, left: 0, burnedTrap: !!spentAt, spentAt: spentAt?.q ?? null, spentName: spentAt?.name ?? null, tries };
   }
   game.results[game.idx] = result;
   game.phase = 'reveal';
@@ -380,6 +386,7 @@ function resultCardHtml(prompt, r) {
   }
   const head = r.status === 'timeout' ? 'SIGALRM · out of time' : 'Passed';
   let body = '';
+  if (r.tries?.length) body += `<p class="hit-note">You tried ${r.tries.map((x) => `<code>${esc(x)}</code>`).join(', ')}.</p>`;
   if (prompt.trap) {
     const a = prompt.answers[0];
     body += `<p class="hit-answer">${esc(a.n)}<small>the one right answer</small></p>`;
@@ -672,6 +679,12 @@ function wire() {
   $('share-btn').addEventListener('click', copyShare);
   $('toggle-theme').addEventListener('click', cycleTheme);
 
+  $('log').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-suggest]');
+    if (!btn || !game || game.phase !== 'answer') return;
+    const verdict = judge(items[game.idx], btn.dataset.suggest, spentMap());
+    if (verdict.status === 'hit') resolvePrompt('hit', verdict.answer, { typed: btn.dataset.typed, corrected: true });
+  });
   $('reveal').addEventListener('click', (e) => {
     if (e.target.closest('#next-btn')) nextPrompt();
   });
