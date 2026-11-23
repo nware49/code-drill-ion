@@ -7,6 +7,7 @@ const root = new URL('..', import.meta.url);
 const read = (p) => readFileSync(new URL(p, root), 'utf8');
 const MODULES = [
   'js/engine.js',
+  'js/art.js',
   'js/bank/helpers.js',
   'js/bank/systems.js',
   'js/bank/languages.js',

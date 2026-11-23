@@ -5,34 +5,56 @@ export const PER_DRILL = 7;
 export const REGULAR_PER_DRILL = 6;
 export const EPOCH = { y: 2026, m: 10, d: 22 }; // Drill #1 = 22 Nov 2026 (month is 0-based)
 
-// Depth tiers. Named after x86 privilege rings: the deeper the ring, the closer to the metal.
+// Depth tiers, named for the layers of the Earth. Rarer answers drill deeper.
 export const TIERS = [
-  { id: 0, name: 'autocomplete', sub: 'the likeliest answer', pts: 10, emoji: '\u{1F916}',
+  { id: 0, key: 'topsoil', name: 'topsoil', sub: 'the autocomplete layer', pts: 10, emoji: '\u{1F916}',
     blurb: 'What everyone, and every model, says first.' },
-  { id: 1, name: 'ring 3', sub: 'userland', pts: 25, emoji: '\u{1F7EB}',
-    blurb: 'Solid. Most working engineers would get here.' },
-  { id: 2, name: 'ring 0', sub: 'kernel', pts: 40, emoji: '\u{1F7E7}',
-    blurb: 'You have shipped things and read the docs.' },
-  { id: 3, name: 'ring −1', sub: 'hypervisor', pts: 60, emoji: '\u{1F7E8}',
-    blurb: 'Specialist knowledge. Someone paid for this.' },
-  { id: 4, name: 'ring −2', sub: 'system management mode', pts: 80, emoji: '\u{2B50}',
-    blurb: 'Deep cut. You were there, or you read the postmortem.' },
-  { id: 5, name: 'ring −3', sub: 'management engine', pts: 100, emoji: '\u{1F48E}',
+  { id: 1, key: 'crust', name: 'crust', sub: 'solid ground', pts: 25, emoji: '\u{1FAA8}',
+    blurb: 'Solid working knowledge.' },
+  { id: 2, key: 'upper', name: 'upper mantle', sub: 'olivine and magma', pts: 40, emoji: '\u{1F7E7}',
+    blurb: 'You have shipped it and read the docs.' },
+  { id: 3, key: 'lower', name: 'lower mantle', sub: 'deep and slow', pts: 60, emoji: '\u{1F7E5}',
+    blurb: 'Specialist knowledge.' },
+  { id: 4, key: 'outer', name: 'outer core', sub: 'liquid iron', pts: 80, emoji: '\u{1F30B}',
+    blurb: 'You were there, or you read the postmortem.' },
+  { id: 5, key: 'inner', name: 'inner core', sub: 'solid iron', pts: 100, emoji: '\u{1F48E}',
     blurb: 'Below everything. Nobody expects it.' },
 ];
-export const ROOT = { id: 'root', name: 'root', sub: 'the one answer', pts: 100, emoji: '\u{1F511}' };
+export const ROOT = { id: 'root', key: 'nether', name: 'the nether', sub: 'root, the one answer', pts: 100, emoji: '\u{1F511}' };
 export const MISS_EMOJI = '\u{2B1C}';
-export const BURN_EMOJI = '\u{1F525}';
+export const BURN_EMOJI = '\u{1F4A5}';
 export const MAX_DEPTH = REGULAR_PER_DRILL * TIERS[5].pts + ROOT.pts;
 
-export const RANKS = [
-  { min: 0, title: 'Surface dweller', line: 'Barely broke ground. Tomorrow, dig.' },
-  { min: 150, title: 'Userland regular', line: 'Comfortable in the shallows. The good stuff is further down.' },
-  { min: 280, title: 'Kernel hacker', line: 'You know where the bodies are buried, and which syscall buried them.' },
-  { min: 420, title: 'Hypervisor', line: 'Running underneath everyone else, and they have no idea.' },
-  { min: 560, title: 'SMM resident', line: 'Invisible to the OS. Deeply suspicious to security researchers.' },
-  { min: MAX_DEPTH, title: 'Ring −3', line: 'Perfect drill. You are the management engine now.' },
+// Points become real depth, the way Krillion turns points into meters:
+// a perfect 700-point drill reaches the center of the Earth.
+export const EARTH_RADIUS_KM = 6371;
+export const kmFor = (points) => Math.round((points * EARTH_RADIUS_KM) / MAX_DEPTH);
+export const fmtKm = (km) => `${km.toLocaleString('en-US')} km`;
+
+// Where a drill stops. Boundaries are the textbook seismic ones (continental crust about 35 km).
+export const GEOLOGY = [
+  { key: 'surface', name: 'the surface', to: 0, title: 'Still on the surface',
+    line: 'Your drill never broke ground. Tomorrow, dig.' },
+  { key: 'crust', name: 'the crust', to: 35, title: 'Scratching the crust',
+    line: 'Continental crust is only about 35 km thick. Keep going.' },
+  { key: 'upper', name: 'the upper mantle', to: 410, title: 'Into the upper mantle',
+    line: 'Through the crust in a blink. The real heat is further down.' },
+  { key: 'transition', name: 'the transition zone', to: 660, title: 'Stuck in the transition zone',
+    line: 'Between 410 and 660 km, olivine is squeezed into denser minerals like blue ringwoodite. Autocompletes stall here a lot.' },
+  { key: 'lower', name: 'the lower mantle', to: 2890, title: 'Grinding through the lower mantle',
+    line: 'Over 2,000 km of bridgmanite, the most common mineral on Earth. Solid drilling.' },
+  { key: 'outer', name: 'the outer core', to: 5150, title: 'Swimming in the outer core',
+    line: 'Liquid iron at 4,000 to 5,000 °C. Its currents generate Earth’s magnetic field.' },
+  { key: 'inner', name: 'the inner core', to: EARTH_RADIUS_KM - 1, title: 'Touching the inner core',
+    line: 'Solid iron and nickel, about as hot as the surface of the Sun, held solid by pressure.' },
+  { key: 'center', name: 'the center of the Earth', to: EARTH_RADIUS_KM, title: 'The center of the Earth',
+    line: '6,371 km down. A perfect drill. There is nowhere deeper to go.' },
 ];
+
+/** The geological layer at a depth in km. */
+export function layerAt(km) {
+  return GEOLOGY.find((g) => km <= g.to) ?? GEOLOGY[GEOLOGY.length - 1];
+}
 
 // Answers that are wrong for every prompt, with a reason.
 export const GLOBAL_NOPE = new Map([
@@ -300,9 +322,7 @@ export function materialize(plan, promptById) {
 export const hex = (n) => `0x${n.toString(16).toUpperCase().padStart(3, '0')}`;
 
 export function rankFor(depth) {
-  let r = RANKS[0];
-  for (const rank of RANKS) if (depth >= rank.min) r = rank;
-  return r;
+  return layerAt(kmFor(depth));
 }
 
 /** results: [{ status: 'hit' | 'timeout' | 'pass', tier?: number | 'root', burnedTrap?: boolean }] */
@@ -336,10 +356,10 @@ export function autocompleteDepth(prompts) {
 }
 
 export function shareText({ label, results, url, baseline }) {
-  const depth = depthOf(results);
-  const vs = Number.isFinite(baseline) ? ` · \u{1F916} ${baseline}` : '';
+  const km = kmFor(depthOf(results));
+  const vs = Number.isFinite(baseline) ? ` · \u{1F916} ${fmtKm(kmFor(baseline))}` : '';
   const lines = [
-    `code drillion ${label} · depth ${depth}/${MAX_DEPTH} (${hex(depth)})${vs}`,
+    `code drillion ${label} · ${fmtKm(km)} down, ${layerAt(km).name}${vs}`,
     results.map(emojiFor).join(''),
   ];
   if (url) lines.push(url);

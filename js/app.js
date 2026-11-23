@@ -2,8 +2,10 @@
 import {
   TIERS, ROOT, MAX_DEPTH, compilePrompt, judge, pointsFor, dailyPlan, practicePlan, materialize,
   dayNumber, dateForDay, hex, rankFor, depthOf, shareText, rng, shuffle, autocompleteDepth,
+  kmFor, fmtKm, layerAt,
 } from './engine.js';
 import { BANK } from './bank/index.js';
+import { DrillScene, badgeURL } from './art.js';
 
 const SUGGEST_URL = 'https://github.com/nware49/code-drill-ion/issues/new';
 const STORE_KEY = 'code-drillion:v1';
@@ -20,6 +22,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const tierClass = (t) => (t === 'root' ? 'troot' : Number.isInteger(t) ? `t${t}` : 'tmiss');
 const tierName = (t) => (t === 'root' ? ROOT.name : TIERS[t].name);
 const tierSub = (t) => (t === 'root' ? ROOT.sub : TIERS[t].sub);
+const tierArt = (t) => (t === 'root' ? ROOT.key : TIERS[t].key);
 const fmtDay = (day) => dateForDay(day).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const NUMBER_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
 const countOf = (n, word) => `${NUMBER_WORDS[n] ?? n} ${word}${n === 1 ? '' : 's'}`;
@@ -54,7 +57,8 @@ let items = [];    // its compiled prompts
 let timerId = 0;
 let log = [];
 let view = 'home';
-let coreShown = 0; // segments already drawn, so only a new one animates
+let sceneSynced = false; // false right after a drill is loaded, so the rig jumps instead of drilling
+const scenes = {};
 
 const secondsPerPrompt = () => (store.settings.extended ? SECONDS_EXTENDED : SECONDS);
 const spentMap = () => new Map(game.spent);
@@ -72,7 +76,7 @@ function attach(record) {
   }
   game = record;
   log = [];
-  coreShown = Infinity;
+  sceneSynced = false;
   return true;
 }
 
@@ -147,7 +151,8 @@ function renderHome() {
   if (rec?.phase === 'done') {
     const depth = depthOf(rec.results);
     btn.textContent = `See drill #${day} results`;
-    status.innerHTML = `Today: depth <b>${depth}</b> (${hex(depth)}). Next drill in <b data-countdown>${countdown()}</b>.`;
+    const km = kmFor(depth);
+    status.innerHTML = `Today you reached <b>${fmtKm(km)}</b>, ${esc(layerAt(km).name)}. Next drill in <b data-countdown>${countdown()}</b>.`;
   } else if (rec) {
     btn.textContent = `Resume drill #${day}`;
     status.innerHTML = `In progress: prompt <b>${Math.min(rec.idx + 1, 7)}</b> of 7. The clock kept running while you were away.`;
@@ -363,11 +368,14 @@ function resultCardHtml(prompt, r) {
     const lore = loreFor(prompt, r.key);
     const typedNote = r.corrected ? `<small>autocorrected from “${esc(r.typed)}”</small>` : '';
     const rootNote = prompt.trap ? '<p class="hit-note">Root access. You saved the famous answer for when it counted.</p>' : '';
-    return `<div class="hit ${tierClass(t)}">
-      <div class="hit-top"><span class="tier ${tierClass(t)}">${esc(tierName(t))} · ${esc(tierSub(t))}</span><span class="hit-pts">+${r.pts}</span></div>
-      <p class="hit-answer">${esc(r.name)}${typedNote}</p>
-      ${lore ? `<p class="hit-lore">${esc(lore)}</p>` : ''}
-      ${rootNote}
+    return `<div class="hit art ${tierClass(t)}">
+      <img class="hit-art" src="${badgeURL(tierArt(t), 84)}" alt="">
+      <div class="hit-body">
+        <div class="hit-top"><span class="tier ${tierClass(t)}">${esc(tierName(t))} · ${esc(tierSub(t))}</span><span class="hit-pts">+${r.pts}<small>${fmtKm(kmFor(r.pts))} deeper</small></span></div>
+        <p class="hit-answer">${esc(r.name)}${typedNote}</p>
+        ${lore ? `<p class="hit-lore">${esc(lore)}</p>` : ''}
+        ${rootNote}
+      </div>
     </div>`;
   }
   const head = r.status === 'timeout' ? 'SIGALRM · out of time' : 'Passed';
@@ -418,18 +426,18 @@ function segHtml(s, minLabel, fresh = false) {
 function describeDepth(results) {
   const { depth } = segments(results);
   const parts = results.map((r, i) => (r ? `prompt ${i + 1}: ${r.status === 'hit' ? `${r.name}, ${tierName(r.tier)}, ${r.pts}` : '0'}` : null)).filter(Boolean);
-  return `Depth ${depth} of ${MAX_DEPTH}${parts.length ? `. ${parts.join('; ')}` : ''}`;
+  const km = kmFor(depth);
+  return `${depth} of ${MAX_DEPTH} points, ${fmtKm(km)} down in ${layerAt(km).name}${parts.length ? `. ${parts.join('; ')}` : ''}`;
 }
 
 function renderCore() {
-  const { segs, depth } = segments(game.results);
-  $('depth-num').textContent = String(depth);
-  $('depth-hex').textContent = hex(depth);
-  const tube = $('core-tube');
-  const ticks = [100, 200, 300, 400, 500, 600, 700].map((n) => `<span class="tick" style="top:${(n / MAX_DEPTH) * 100}%">${n}</span>`).join('');
-  tube.innerHTML = `${ticks}${segs.map((s, n) => segHtml(s, 25, n >= coreShown)).join('')}<svg class="core-bit" viewBox="0 0 12 26" style="--depth:${depth / MAX_DEPTH}" aria-hidden="true"><path d="M3 0h6v6L3 9zM3 11l6-3v5l-6 3zM3 18l6-3v3l-3 8-3-8z"/></svg>`;
-  tube.setAttribute('aria-label', describeDepth(game.results));
-  coreShown = segs.length;
+  const { depth } = segments(game.results);
+  const km = kmFor(depth);
+  $('depth-num').textContent = km.toLocaleString('en-US');
+  $('depth-sub').textContent = `${layerAt(km).name} \u00b7 ${depth} pts`;
+  $('scene-wrap').setAttribute('aria-label', describeDepth(game.results));
+  scenes.play?.setDepth(km, { animate: sceneSynced });
+  sceneSynced = true;
 
   $('core-cells').innerHTML = items.map((p, i) => {
     const r = game.results[i];
@@ -458,26 +466,39 @@ function showResults() {
 
   const scoredNote = game.mode === 'daily' ? fmtDay(game.day) : 'unscored';
   $('res-label').textContent = `${drillLabel(game)} · ${scoredNote}`;
-  $('res-num').textContent = String(depth);
+  const km = kmFor(depth);
+  $('res-num').textContent = km.toLocaleString('en-US');
+  $('res-pts').textContent = String(depth);
   $('res-hex').textContent = hex(depth);
   $('res-rank').textContent = rank.title;
-  $('res-line').textContent = `${rank.line} ${belowAuto === 0 ? 'None of your answers got below the autocomplete layer.' : `${countOf(belowAuto, 'answer')} landed below the autocomplete layer.`}`;
+  $('res-line').textContent = `${rank.line} ${belowAuto === 0 ? 'None of your answers got below the topsoil, where the autocomplete lives.' : `${countOf(belowAuto, 'answer')} got below the topsoil, where the autocomplete lives.`}`;
 
   const base = autocompleteDepth(items);
   const diff = depth - base;
   const why = base < ROOT.pts
     ? ' It always gives the likeliest answer, so it spent root\u2019s answer on an earlier prompt.'
     : ' It kept root\u2019s answer this time.';
-  const verdict = diff > 0 ? `You drilled <b>${diff}</b> deeper.` : diff === 0 ? 'A dead heat.' : `That\u2019s <b>${-diff}</b> deeper than you.`;
-  $('res-vs').innerHTML = `The autocomplete reached depth <b>${base}</b> on this drill.${why} ${verdict}`;
+  const baseKm = kmFor(base);
+  const gap = Math.abs(km - baseKm);
+  const verdict = diff > 0 ? `You drilled <b>${fmtKm(gap)}</b> deeper.` : diff === 0 ? 'A dead heat.' : `That\u2019s <b>${fmtKm(gap)}</b> deeper than you.`;
+  $('res-vs').innerHTML = `The autocomplete stopped at <b>${fmtKm(baseKm)}</b>, in ${esc(layerAt(baseKm).name)}.${why} ${verdict}`;
+
+  const scene = scenes.results;
+  if (scene) {
+    $('res-scene').setAttribute('aria-label', `Cross-section of the Earth. Your drill reached ${fmtKm(km)}, ${layerAt(km).name}. The autocomplete stopped at ${fmtKm(baseKm)}.`);
+    scene.setCaption([['you', '600', 10], [fmtKm(km), '600', 12]]);
+    scene.setGhost(baseKm, [['autocomplete', '600', 10], [fmtKm(baseKm), '500', 11]]);
+    scene.setDepth(0, { animate: false });
+    window.setTimeout(() => scene.setDepth(km, { duration: 1600 + Math.min(1600, km * 0.25) }), 250);
+  }
 
   const label = game.mode === 'practice' ? 'practice' : `#${game.day}`;
   $('share-text').textContent = shareText({ label, results, url: SHARE_URL, baseline: base });
   $('share-status').textContent = '';
 
   const { segs } = segments(results);
-  const scale = [0, 100, 200, 300, 400, 500, 600, 700].map((n) => `<span>${n}</span>`).join('');
-  const mark = `<span class="mark" style="--at:${base / MAX_DEPTH}"><span>autocomplete ${base}</span></span>`;
+  const scale = [0, 100, 200, 300, 400, 500, 600, 700].map((n) => `<span>${n === 700 ? '700 pts' : n}</span>`).join('');
+  const mark = `<span class="mark" style="--at:${base / MAX_DEPTH}"><span>autocomplete \u00b7 ${base} pts</span></span>`;
   $('res-core').innerHTML = `<div class="hbar" role="img" aria-label="${esc(`${describeDepth(results)}. The autocomplete reached ${base}.`)}">${segs.map((s) => segHtml(s, 40, true)).join('')}${mark}</div><div class="hbar-scale" aria-hidden="true">${scale}</div>`;
 
   $('recap').innerHTML = items.map((prompt, i) => {
@@ -554,8 +575,9 @@ function closeDialog(dlg) {
 }
 
 function renderHelp() {
-  const rows = TIERS.map((t) => `<li class="t${t.id}"><span class="tier t${t.id}">${esc(t.name)} · ${esc(t.sub)}</span><span>${t.pts}</span></li>`);
-  rows.push(`<li class="troot"><span class="tier troot">root · the seventh prompt</span><span>${ROOT.pts}</span></li>`);
+  const art = (key) => `<span class="mini-art" style="background-image:url(${badgeURL(key, 28)})"></span>`;
+  const rows = TIERS.map((t) => `<li class="t${t.id}">${art(t.key)}<span class="tier t${t.id}">${esc(t.name)} · ${esc(t.sub)}</span><span>${t.pts}</span></li>`);
+  rows.push(`<li class="troot">${art(ROOT.key)}<span class="tier troot">the nether · root, the seventh prompt</span><span>${ROOT.pts}</span></li>`);
   $('help-ladder').innerHTML = rows.join('');
   $('opt-extended').checked = !!store.settings.extended;
 }
@@ -685,12 +707,23 @@ function wire() {
   }, 1000);
 }
 
+/** Tier badges on the home ladder, and the three drilling scenes. */
+function paintArt() {
+  for (const el of document.querySelectorAll('[data-badge]')) el.style.backgroundImage = `url(${badgeURL(el.dataset.badge, 40)})`;
+  scenes.home = new DrillScene($('home-scene'), { mode: 'ladder', rows: () => [...document.querySelectorAll('#strata .stratum')] });
+  scenes.play = new DrillScene($('play-scene'), { mode: 'follow' });
+  scenes.results = new DrillScene($('res-scene'), { mode: 'full', labels: true });
+  // One orchestrated moment on arrival: the rig drills from the grass down to the inner core.
+  window.setTimeout(() => scenes.home.setDepth(6200, { duration: 3200 }), 400);
+}
+
 function boot(data = {}) {
   store = readStore(data.store);
   applyTheme();
   wire();
   $('bank-note').textContent = `Answers are checked against a hand-built bank of ${BANK_ANSWERS.toLocaleString()} answers across ${PROMPTS.length} prompts, and every answer carries a line of history. Rarity is editorial: ranked by hand by how unlikely an engineer, or a model, would be to say it first.`;
   renderHome();
+  paintArt();
 
   // Pick up a drill that was interrupted mid-prompt.
   const today = store.days[dayNumber()];

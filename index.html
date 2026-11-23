@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Code Drillion</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="A daily trivia drill for software engineers. The obvious answer is worth 10 points. The deep cut only you would think of is worth 100.">
+<meta name="description" content="A daily trivia drill for software engineers. Obvious answers barely scratch the topsoil. Deep cuts drill you toward the center of the Earth.">
 <meta name="drill:share-url" content="">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315181d'/%3E%3Cpath d='M13 4h6v6l-6 3zM13 15l6-3v5l-6 3zM13 22l6-3v3l-3 7-3-7z' fill='%23ffb94c'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,7 +36,7 @@
         <div class="home-copy">
           <p class="eyebrow" id="home-meta">The daily drill</p>
           <h1 id="home-title" class="hero-title">Drill below the <span class="caret" aria-hidden="true"></span><span class="ghost">autocomplete.</span></h1>
-          <p class="lede">Seven prompts. Thirty seconds each. Name anything that fits. The answer everyone gives is worth 10 points. The one only you would think of is worth 100.</p>
+          <p class="lede">Seven prompts. Thirty seconds each. Name anything that fits. The answer everyone gives barely scratches the topsoil. The one only you would think of drills straight into the inner core.</p>
           <div class="cta">
             <button class="btn primary" id="start-daily" type="button">Start today&rsquo;s drill</button>
             <button class="btn" id="start-practice" type="button">Practice drill</button>
@@ -45,26 +45,27 @@
 
           <ol class="rules">
             <li><b>Type any valid answer.</b> Wrong guesses only cost time. Case, punctuation and small typos don&rsquo;t matter.</li>
-            <li><b>Rarer answers drill deeper.</b> Each answer sits in a layer of the stack, from autocomplete down to ring &minus;3.</li>
+            <li><b>Rarer answers drill deeper.</b> Every answer sits in a layer of the Earth, from topsoil (10 points) down to the inner core (100).</li>
             <li><b>Every answer works once per drill.</b> Use one twice and you get a use-after-free.</li>
-            <li><b>The seventh prompt is root.</b> It has exactly one right answer, worth 100. Hope you didn&rsquo;t spend it earlier.</li>
+            <li><b>The seventh prompt is root.</b> Its one right answer is hidden in the nether, worth 100. Hope you didn&rsquo;t spend it earlier.</li>
           </ol>
         </div>
 
         <figure class="ladder" aria-labelledby="ladder-cap">
           <figcaption id="ladder-cap" class="ladder-cap"><span>Layer</span><span>Points</span></figcaption>
           <div class="ladder-body">
-            <div class="shaft" aria-hidden="true"><i></i><svg class="bit" viewBox="0 0 12 26"><path d="M3 0h6v6L3 9zM3 11l6-3v5l-6 3zM3 18l6-3v3l-3 8-3-8z"/></svg></div>
-            <ol class="strata">
-              <li class="stratum t0"><span class="s-name">autocomplete</span><span class="s-sub">What everyone, and every model, says first.</span><span class="s-pts">10</span></li>
-              <li class="stratum t1"><span class="s-name">ring 3 <em>userland</em></span><span class="s-sub">Solid working knowledge.</span><span class="s-pts">25</span></li>
-              <li class="stratum t2"><span class="s-name">ring 0 <em>kernel</em></span><span class="s-sub">You&rsquo;ve shipped it and read the docs.</span><span class="s-pts">40</span></li>
-              <li class="stratum t3"><span class="s-name">ring &minus;1 <em>hypervisor</em></span><span class="s-sub">Specialist knowledge.</span><span class="s-pts">60</span></li>
-              <li class="stratum t4"><span class="s-name">ring &minus;2 <em>SMM</em></span><span class="s-sub">You were there, or you read the postmortem.</span><span class="s-pts">80</span></li>
-              <li class="stratum t5"><span class="s-name">ring &minus;3 <em>ME</em></span><span class="s-sub">Below everything. Nobody expects it.</span><span class="s-pts">100</span></li>
+            <canvas class="ladder-scene" id="home-scene" aria-hidden="true"></canvas>
+            <ol class="strata" id="strata">
+              <li class="stratum t0" data-layer="topsoil"><span class="s-art" data-badge="topsoil" aria-hidden="true"></span><span class="s-name">topsoil <em>autocomplete</em></span><span class="s-sub">What everyone, and every model, says first.</span><span class="s-pts">10</span></li>
+              <li class="stratum t1" data-layer="crust"><span class="s-art" data-badge="crust" aria-hidden="true"></span><span class="s-name">crust</span><span class="s-sub">Solid working knowledge.</span><span class="s-pts">25</span></li>
+              <li class="stratum t2" data-layer="upper"><span class="s-art" data-badge="upper" aria-hidden="true"></span><span class="s-name">upper mantle</span><span class="s-sub">You&rsquo;ve shipped it and read the docs.</span><span class="s-pts">40</span></li>
+              <li class="stratum t3" data-layer="lower"><span class="s-art" data-badge="lower" aria-hidden="true"></span><span class="s-name">lower mantle</span><span class="s-sub">Specialist knowledge.</span><span class="s-pts">60</span></li>
+              <li class="stratum t4" data-layer="outer"><span class="s-art" data-badge="outer" aria-hidden="true"></span><span class="s-name">outer core</span><span class="s-sub">You were there, or you read the postmortem.</span><span class="s-pts">80</span></li>
+              <li class="stratum t5" data-layer="inner"><span class="s-art" data-badge="inner" aria-hidden="true"></span><span class="s-name">inner core</span><span class="s-sub">Below everything. Nobody expects it.</span><span class="s-pts">100</span></li>
+              <li class="stratum troot" data-layer="nether"><span class="s-art" data-badge="nether" aria-hidden="true"></span><span class="s-name">the nether <em>root</em></span><span class="s-sub">The seventh prompt&rsquo;s one answer.</span><span class="s-pts">100</span></li>
             </ol>
           </div>
-          <p class="ladder-foot">Six prompts at up to 100 each, plus root: a perfect drill reaches depth <b>700</b>, or <code>0x2BC</code>.</p>
+          <p class="ladder-foot">Every point is about 9 km of drilling. A perfect drill scores 700 and reaches <b>6,371 km</b>, the center of the Earth.</p>
         </figure>
       </div>
 
@@ -83,10 +84,12 @@
       <aside class="core" aria-label="Depth so far">
         <div class="core-read">
           <span class="label">Depth</span>
-          <strong class="core-num" id="depth-num">0</strong>
-          <code class="core-hex" id="depth-hex">0x000</code>
+          <strong class="core-num"><span id="depth-num">0</span><small>km</small></strong>
+          <span class="core-sub" id="depth-sub">the surface</span>
         </div>
-        <div class="core-tube" id="core-tube" role="img" aria-label="No depth yet"></div>
+        <div class="scene-wrap" id="scene-wrap" role="img" aria-label="Depth 0 km">
+          <canvas class="play-scene" id="play-scene"></canvas>
+        </div>
         <ol class="core-cells" id="core-cells"></ol>
       </aside>
 
@@ -124,8 +127,8 @@
       <div class="res-top">
         <div class="res-head">
           <p class="eyebrow" id="res-label">Drill complete</p>
-          <p class="res-depth"><strong id="res-num">0</strong><span class="res-of">/ 700</span><code id="res-hex">0x000</code></p>
-          <h2 class="res-rank" id="res-rank">Surface dweller</h2>
+          <p class="res-depth"><strong id="res-num">0</strong><span class="res-unit">km</span><span class="res-of"><span id="res-pts">0</span> / 700 points &middot; <code id="res-hex">0x000</code></span></p>
+          <h2 class="res-rank" id="res-rank">Still on the surface</h2>
           <p class="res-line" id="res-line"></p>
           <p class="res-vs" id="res-vs"></p>
         </div>
@@ -138,8 +141,16 @@
         </div>
       </div>
 
-      <div class="res-core" id="res-core"></div>
-      <ol class="recap" id="recap"></ol>
+      <div class="res-journey">
+        <figure class="journey">
+          <canvas class="res-scene" id="res-scene" role="img" aria-label="Your drill"></canvas>
+          <figcaption class="fine">Layer depths are real. Thin layers are drawn taller so you can see them.</figcaption>
+        </figure>
+        <div class="res-detail">
+          <div class="res-core" id="res-core"></div>
+          <ol class="recap" id="recap"></ol>
+        </div>
+      </div>
 
       <div class="res-foot">
         <p class="next-drill" id="next-drill"></p>
@@ -164,9 +175,10 @@
     <p>Every day brings seven prompts, the same for everyone. Each one asks you to name something: a sorting algorithm, a port, an RFC, a Turing laureate. You get thirty seconds.</p>
     <ul class="help-list">
       <li>Any valid answer counts. Wrong guesses cost nothing but time.</li>
-      <li>Rarer answers score more. The obvious one sits in the <b>autocomplete</b> layer and earns 10. Deep cuts reach <b>ring &minus;3</b> and earn 100.</li>
+      <li>Rarer answers drill deeper. The obvious one only scratches the <b>topsoil</b>, the autocomplete layer, for 10 points. Deep cuts reach the <b>inner core</b> for 100.</li>
       <li>Each answer can be used once per drill, across all seven prompts. Typing one again is a <b>use-after-free</b>.</li>
-      <li>The seventh prompt is <b>root</b>: one right answer, worth 100. It is usually the famous answer to an earlier prompt.</li>
+      <li>The seventh prompt is <b>root</b>. Its one right answer is hidden in <b>the nether</b>, worth 100, and it is usually the famous answer to an earlier prompt.</li>
+      <li>Points become depth: each one is about 9 km of drilling, so a perfect 700 reaches the center of the Earth, 6,371 km down.</li>
       <li>Passing scores 0 and moves on. After every prompt you&rsquo;ll see the deepest answers you could have given.</li>
     </ul>
     <h3>Layers</h3>

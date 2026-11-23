@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   normalize, digitsOf, editDistance, compilePrompt, compileTrap, judge, dailyPlan, practicePlan,
   materialize, dayNumber, dateForDay, shareText, depthOf, hex, rankFor, MAX_DEPTH, TIERS, PER_DRILL, autocompleteDepth,
+  kmFor, fmtKm, layerAt, EARTH_RADIUS_KM,
 } from '../js/engine.js';
 import { BANK } from '../js/bank/index.js';
 
@@ -232,8 +233,10 @@ test('the autocomplete baseline spends famous answers and often loses root', () 
 test('scoring and sharing', () => {
   assert.equal(MAX_DEPTH, 700);
   assert.equal(hex(415), '0x19F');
-  assert.equal(rankFor(0).title, 'Surface dweller');
-  assert.equal(rankFor(700).title, 'Ring −3');
+  assert.equal(rankFor(0).title, 'Still on the surface');
+  assert.equal(rankFor(700).key, 'center');
+  assert.equal(rankFor(699).key, 'inner');
+  assert.equal(rankFor(60).key, 'transition', 'the usual autocomplete baseline stalls in the transition zone');
   const results = [
     { status: 'hit', tier: 0, pts: 10 }, { status: 'hit', tier: 5, pts: 100 }, { status: 'timeout', pts: 0 },
     { status: 'hit', tier: 2, pts: 40 }, { status: 'pass', pts: 0 }, { status: 'hit', tier: 3, pts: 60 },
@@ -241,8 +244,24 @@ test('scoring and sharing', () => {
   ];
   assert.equal(depthOf(results), 210);
   const text = shareText({ label: '#7', results });
-  assert.match(text, /^code drillion #7 · depth 210\/700 \(0x0D2\)/);
-  assert.match(shareText({ label: '#7', results, baseline: 60 }).split('\n')[0], / · \u{1F916} 60$/u);
+  assert.equal(text.split('\n')[0], 'code drillion #7 · 1,911 km down, the lower mantle');
+  assert.match(shareText({ label: '#7', results, baseline: 60 }).split('\n')[0], / · \u{1F916} 546 km$/u);
   assert.equal([...text.split('\n')[1]].length, 7);
   assert.equal(TIERS.map((t) => t.pts).join(), '10,25,40,60,80,100');
+  assert.equal(TIERS.map((t) => t.name).join(), 'topsoil,crust,upper mantle,lower mantle,outer core,inner core');
+});
+
+test('points convert to real depth, and a perfect drill reaches the center of the Earth', () => {
+  assert.equal(kmFor(0), 0);
+  assert.equal(kmFor(MAX_DEPTH), EARTH_RADIUS_KM);
+  assert.equal(kmFor(415), 3777);
+  assert.equal(fmtKm(3777), '3,777 km');
+  assert.equal(layerAt(0).key, 'surface');
+  assert.equal(layerAt(35).key, 'crust');
+  assert.equal(layerAt(36).key, 'upper');
+  assert.equal(layerAt(660).key, 'transition');
+  assert.equal(layerAt(2890).key, 'lower');
+  assert.equal(layerAt(2891).key, 'outer');
+  assert.equal(layerAt(5151).key, 'inner');
+  assert.equal(layerAt(6371).key, 'center');
 });
