@@ -20,8 +20,8 @@ A language model is built to produce the most probable next token. Ask one to na
   | inner core | 100 | Below everything. Nobody expects it |
   | the nether | 100 | Root's one answer (see below) |
 
-- **Every answer works once per drill.** Reuse one, even on a different prompt, and you get a *use-after-free*.
-- **The seventh prompt is root:** exactly one right answer, hidden in the nether and worth 100, and it is usually the famous answer to an earlier prompt. Spend Quicksort on "name a sorting algorithm" and you can't use it when root asks for Hoare's 1959 algorithm.
+- **Every answer works once.** Reuse one on another of the six regular prompts and you get a *use-after-free*.
+- **The seventh prompt is root:** a trivia question with exactly one right answer, hidden in the nether and worth 100. It often calls back to an earlier prompt ("Name the sorting algorithm Tony Hoare invented in 1959"), and answers you already used are allowed there.
 - **After every prompt** you see the lore behind your answer, what the autocomplete would have said, and one deeper answer from each lower layer.
 - **Points become real depth**, the way Krillion turns points into meters: each point is about 9.1 km, so a perfect 700 reaches 6,371 km, the center of the Earth. Your rank is the geological layer you stop in (the transition zone, the lower mantle, the outer core and so on).
 - **Results** show your depth, a cross-section of your whole dive beside the autocomplete's stalled rig, a to-scale score bar, and a spoiler-free share grid:
@@ -43,7 +43,7 @@ The format comes from three daily games, combined and moved into software engine
 | [MedRare](https://medrare.io) | The same loop for one profession (medicine), with tiers named after anatomical depth and a reference for every answer |
 | [Kabloom](https://kabloom.io) | No answer can be used twice, and each day is built around a trap: the last question's only answer is the famous one people spent earlier |
 
-New here: a drilling rig instead of a dive, with layers of the Earth as the tiers and real kilometers as the depth; the **autocomplete baseline** (a greedy "always say the likeliest answer" player, which usually falls into the root trap), use-after-free and root as the burn and trap mechanics, and a line of history on every one of the 1,912 answers.
+New here: a drilling rig instead of a dive, with layers of the Earth as the tiers and real kilometers as the depth; the **autocomplete baseline** (a greedy "always say the likeliest answer" player that scores 160 points, 1,456 km, on every drill), use-after-free for reused answers, a root trivia question to finish, and a line of history on every one of the 1,912 answers.
 
 ## Artwork
 

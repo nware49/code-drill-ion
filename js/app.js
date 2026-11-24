@@ -304,10 +304,8 @@ function resolvePrompt(kind, answer, extra = {}) {
     result = { status: 'hit', tier: answer.t, pts: pointsFor(answer), name: answer.n, key: answer.key, typed: extra.typed, corrected: !!extra.corrected, left };
     game.spent.push([answer.key, { q: game.idx + 1, name: answer.n }]);
   } else {
-    const target = prompt.trap ? prompt.answers[0] : null;
-    const spentAt = target ? spentMap().get(target.key) : null;
     const tries = log.map((e) => e.typed.trim()).filter(Boolean);
-    result = { status: kind, pts: 0, left: 0, burnedTrap: !!spentAt, spentAt: spentAt?.q ?? null, spentName: spentAt?.name ?? null, tries };
+    result = { status: kind, pts: 0, left: 0, tries };
   }
   game.results[game.idx] = result;
   game.phase = 'reveal';
@@ -373,7 +371,7 @@ function resultCardHtml(prompt, r) {
     const t = r.tier;
     const lore = loreFor(prompt, r.key);
     const typedNote = r.corrected ? `<small>autocorrected from “${esc(r.typed)}”</small>` : '';
-    const rootNote = prompt.trap ? '<p class="hit-note">Root access. You saved the famous answer for when it counted.</p>' : '';
+    const rootNote = prompt.trap ? '<p class="hit-note">Root access granted.</p>' : '';
     return `<div class="hit art ${tierClass(t)}">
       <img class="hit-art" src="${badgeURL(tierArt(t), 84)}" alt="">
       <div class="hit-body">
@@ -390,7 +388,6 @@ function resultCardHtml(prompt, r) {
   if (prompt.trap) {
     const a = prompt.answers[0];
     body += `<p class="hit-answer">${esc(a.n)}<small>the one right answer</small></p>`;
-    if (r.burnedTrap) body += `<p class="hit-note alarm">You spent it on prompt ${r.spentAt}. Use-after-free.</p>`;
     if (a.l) body += `<p class="hit-lore">${esc(a.l)}</p>`;
   }
   return `<div class="hit tmiss">
@@ -456,7 +453,7 @@ function renderCore() {
 
 function renderSpent() {
   const box = $('freed');
-  box.hidden = game.spent.length === 0;
+  box.hidden = game.spent.length === 0 || !!items[game.idx]?.trap; // root may reuse spent answers
   $('freed-list').innerHTML = game.spent.map(([, s]) => `<span class="spent" title="Spent on prompt ${s.q}">${esc(s.name)}</span>`).join(' ');
 }
 
@@ -482,13 +479,10 @@ function showResults() {
 
   const base = autocompleteDepth(items);
   const diff = depth - base;
-  const why = base < ROOT.pts
-    ? ' It always gives the likeliest answer, so it spent root\u2019s answer on an earlier prompt.'
-    : ' It kept root\u2019s answer this time.';
   const baseKm = kmFor(base);
   const gap = Math.abs(km - baseKm);
   const verdict = diff > 0 ? `You drilled <b>${fmtKm(gap)}</b> deeper.` : diff === 0 ? 'A dead heat.' : `That\u2019s <b>${fmtKm(gap)}</b> deeper than you.`;
-  $('res-vs').innerHTML = `The autocomplete stopped at <b>${fmtKm(baseKm)}</b>, in ${esc(layerAt(baseKm).name)}.${why} ${verdict}`;
+  $('res-vs').innerHTML = `The autocomplete stopped at <b>${fmtKm(baseKm)}</b>, in ${esc(layerAt(baseKm).name)}. It gives the likeliest answer every time: six topsoil answers, then root. ${verdict}`;
 
   const scene = scenes.results;
   if (scene) {
@@ -515,7 +509,7 @@ function showResults() {
       : `<span class="rc-a none">${r.status === 'timeout' ? 'out of time' : 'passed'}</span>`;
     const tierCell = r.status === 'hit'
       ? `<span class="tier ${tierClass(r.tier)}">${esc(tierName(r.tier))}</span>`
-      : `<span class="tier tmiss">${r.burnedTrap ? 'use-after-free' : 'no depth'}</span>`;
+      : '<span class="tier tmiss">no depth</span>';
     const more = prompt.trap
       ? resultCardHtml(prompt, r)
       : `${r.status === 'hit' && loreFor(prompt, r.key) ? `<p class="hit-lore">${esc(loreFor(prompt, r.key))}</p>` : ''}${autoSaidHtml(prompt)}${cutsHtml(prompt, r.key)}`;

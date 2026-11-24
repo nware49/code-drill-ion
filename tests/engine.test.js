@@ -199,6 +199,18 @@ test('judge: nope messages and global nopes', () => {
   assert.equal(judge(P('editors'), 'Cursor').status, 'hit', 'real answers beat global nopes');
 });
 
+test('root accepts an answer already spent on an earlier prompt', () => {
+  const sorting = P('sorting');
+  const quick = judge(sorting, 'quicksort').answer;
+  const spent = new Map([[quick.key, { q: 2, name: 'Quicksort' }]]);
+  assert.equal(judge(sorting, 'quicksort', spent).status, 'burned', 'regular prompts still refuse reuse');
+  const root = compileTrap(sorting, 0);
+  const r = judge(root, 'quicksort', spent);
+  assert.equal(r.status, 'hit');
+  assert.equal(r.answer.n, 'Quicksort');
+  assert.equal(judge(root, 'quikcsort', spent).status, 'hit', 'typos still autocorrect on root');
+});
+
 test('trap prompts accept only the one answer', () => {
   const sorting = P('sorting');
   const root = compileTrap(sorting, 0);
@@ -254,18 +266,10 @@ test('practice plans vary by seed', () => {
 
 /* ---------------- scoring ---------------- */
 
-test('the autocomplete baseline spends famous answers and often loses root', () => {
-  // Drill #1: its sorting prompt's likeliest answer is Quicksort, which root needs.
-  const day1 = materialize(dailyPlan(PROMPTS, 1), BY_ID);
-  assert.equal(autocompleteDepth(day1), 60);
-  let lostRoot = 0;
+test('the autocomplete baseline gives topsoil answers and always gets root', () => {
   for (let day = 1; day <= 200; day++) {
-    const depth = autocompleteDepth(materialize(dailyPlan(PROMPTS, day), BY_ID));
-    assert.ok(depth >= 60 && depth <= 175, `day ${day}: baseline ${depth}`);
-    if (depth < 100) lostRoot++;
+    assert.equal(autocompleteDepth(materialize(dailyPlan(PROMPTS, day), BY_ID)), 160, `day ${day}`);
   }
-  // Some roots target the second-most-famous answer, so the rival varies from drill to drill.
-  assert.ok(lostRoot > 40 && lostRoot < 160, `autocomplete lost root ${lostRoot}/200 times`);
 });
 
 test('scoring and sharing', () => {
@@ -278,7 +282,7 @@ test('scoring and sharing', () => {
   const results = [
     { status: 'hit', tier: 0, pts: 10 }, { status: 'hit', tier: 5, pts: 100 }, { status: 'timeout', pts: 0 },
     { status: 'hit', tier: 2, pts: 40 }, { status: 'pass', pts: 0 }, { status: 'hit', tier: 3, pts: 60 },
-    { status: 'timeout', burnedTrap: true, pts: 0 },
+    { status: 'timeout', pts: 0 },
   ];
   assert.equal(depthOf(results), 210);
   const text = shareText({ label: '#7', results });

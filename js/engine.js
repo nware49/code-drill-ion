@@ -22,7 +22,6 @@ export const TIERS = [
 ];
 export const ROOT = { id: 'root', key: 'nether', name: 'the nether', sub: 'root, the one answer', pts: 100, emoji: '\u{1F511}' };
 export const MISS_EMOJI = '\u{2B1C}';
-export const BURN_EMOJI = '\u{1F4A5}';
 export const MAX_DEPTH = REGULAR_PER_DRILL * TIERS[5].pts + ROOT.pts;
 
 // Points become real depth, the way Krillion turns points into meters:
@@ -40,7 +39,7 @@ export const GEOLOGY = [
   { key: 'upper', name: 'the upper mantle', to: 410, title: 'Into the upper mantle',
     line: 'Through the crust in a blink. The real heat is further down.' },
   { key: 'transition', name: 'the transition zone', to: 660, title: 'Stuck in the transition zone',
-    line: 'Between 410 and 660 km, olivine is squeezed into denser minerals like blue ringwoodite. Autocompletes stall here a lot.' },
+    line: 'Between 410 and 660 km, olivine is squeezed into denser minerals like blue ringwoodite, which can hold water in its crystals.' },
   { key: 'lower', name: 'the lower mantle', to: 2890, title: 'Grinding through the lower mantle',
     line: 'Over 2,000 km of bridgmanite, the most common mineral on Earth. Solid drilling.' },
   { key: 'outer', name: 'the outer core', to: 5150, title: 'Swimming in the outer core',
@@ -237,6 +236,8 @@ function suggestionsFor(prompt, forms, burned) {
  *   'miss' | 'empty'
  */
 export function judge(prompt, input, burned = new Map()) {
+  // Root is a bonus trivia question: its answer may repeat one already used on an earlier prompt.
+  if (prompt.trap) burned = new Map();
   const formOf = (s) => (prompt.numeric ? digitsOf(s) : normalize(s, prompt.strip, prompt.keep));
   const form = formOf(input);
   if (!form) return { status: 'empty' };
@@ -332,7 +333,7 @@ export function dateForDay(day) {
   return new Date(EPOCH.y, EPOCH.m, EPOCH.d + (day - 1));
 }
 
-/** Order six regular prompts plus one root prompt whose answer hides among the first three. */
+/** Order six regular prompts plus one root prompt that calls back to one of the first three. */
 function arrange(chosen, rand) {
   const withTraps = chosen.filter((p) => p.traps.length > 0);
   const target = withTraps[Math.floor(rand() * withTraps.length)];
@@ -396,9 +397,9 @@ export function rankFor(depth) {
   return layerAt(kmFor(depth));
 }
 
-/** results: [{ status: 'hit' | 'timeout' | 'pass', tier?: number | 'root', burnedTrap?: boolean }] */
+/** results: [{ status: 'hit' | 'timeout' | 'pass', tier?: number | 'root' }] */
 export function emojiFor(result) {
-  if (result.status !== 'hit') return result.burnedTrap ? BURN_EMOJI : MISS_EMOJI;
+  if (result.status !== 'hit') return MISS_EMOJI;
   return result.tier === 'root' ? ROOT.emoji : TIERS[result.tier].emoji;
 }
 
@@ -408,14 +409,14 @@ export function depthOf(results) {
 
 /**
  * What a pure autocomplete scores on a drill: it always gives the likeliest unspent answer
- * (the first autocomplete-tier answer in the bank), so it usually spends root's answer early.
+ * (the first topsoil answer in the bank), and it knows root's trivia answer.
  */
 export function autocompleteDepth(prompts) {
   const spent = new Set();
   let depth = 0;
   for (const p of prompts) {
     if (p.trap) {
-      if (!spent.has(p.answers[0].key)) depth += ROOT.pts;
+      depth += ROOT.pts;
       continue;
     }
     const pick = p.answers.find((a) => a.t === 0 && !spent.has(a.key)) ?? p.answers.find((a) => !spent.has(a.key));
