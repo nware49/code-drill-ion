@@ -17,6 +17,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write # Workload Identity Federation: trade a GitHub token for a Claude API token
 
 concurrency:
   group: grow-bank
@@ -25,6 +26,11 @@ concurrency:
 jobs:
   grow:
     runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,13 +41,11 @@ jobs:
 
       - run: npm ci
 
-      - name: Check for an API key
+      - name: Check for Claude credentials
         id: key
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::notice::Add an ANTHROPIC_API_KEY repository secret to grow the bank."
+          if [ -z "$ANTHROPIC_FEDERATION_RULE_ID" ] || [ -z "$ANTHROPIC_ORGANIZATION_ID" ]; then
+            echo "::notice::Set up Workload Identity Federation (see README) to grow the bank."
             echo "missing=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -49,7 +53,6 @@ jobs:
         id: grow
         if: steps.key.outputs.missing != 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WIKIMEDIA_USER_AGENT: ${{ vars.WIKIMEDIA_USER_AGENT }}
           PROPOSE: ${{ inputs.propose }}
           EXPAND: ${{ inputs.expand }}

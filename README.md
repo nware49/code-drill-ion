@@ -118,7 +118,12 @@ The result opens as a pull request with the same commands and 24-hour window (se
 1. **Merge this branch into `main`.** Scheduled workflows only run from the default branch.
 2. **Let Actions open pull requests.** Settings → Actions → General → Workflow permissions: choose *Read and write permissions* and tick *Allow GitHub Actions to create and approve pull requests*.
 3. **Turn on Pages.** Settings → Pages → Source: *GitHub Actions*.
-4. **Add the API key** for bank growth. Settings → Secrets and variables → Actions → New repository secret: `ANTHROPIC_API_KEY`. Without it, puzzles are still planned from the existing bank.
+4. **Connect Claude** for bank growth, with Workload Identity Federation instead of an API key: GitHub proves which workflow is calling, and Claude issues a token that expires within minutes, so the repository stores no secret.
+   - In the Claude Console, open the Workload identity page, click **Connect workload** and choose **GitHub Actions**. Set the subject prefix to `repo:<owner>/<repo>:ref:refs/heads/main`, the audience to `https://api.anthropic.com` and the claim `repository_owner` to your GitHub owner, so only `main` can sign in. Every Claude call runs from `main`: the schedules, manual runs, and `/reroll` and `/swap` comments.
+   - Settings → Secrets and variables → Actions → **Variables**: add `ANTHROPIC_FEDERATION_RULE_ID` (`fdrl_…`), `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID` (`svac_…`) and `ANTHROPIC_WORKSPACE_ID` (`wrkspc_…`). These are IDs, not secrets. Don't also add an `ANTHROPIC_API_KEY` secret: a key takes priority over federation.
+   - Run **Check Claude sign-in** from the Actions tab to test it. If it's denied, the Console's authentication history says why.
+
+   Without this step, puzzles are still planned from the existing bank. For local runs, export `ANTHROPIC_API_KEY`.
 5. *(Optional)* Add a repository variable `WIKIMEDIA_USER_AGENT` with a contact address, as Wikimedia asks of API clients.
 6. *(Optional)* Branch protection that requires reviews on `main` will block the automatic merge. Leave reviews optional, or let the GitHub Actions bot bypass them.
 

@@ -17,6 +17,7 @@ permissions:
   issues: write
   actions: write
   checks: read
+  id-token: write # Workload Identity Federation, for /reroll and /swap
 
 concurrency:
   group: puzzle-review-${{ github.event.issue.number || github.event.pull_request.number || 'scheduled' }}
@@ -26,6 +27,11 @@ jobs:
   review:
     if: github.event_name != 'issue_comment' || github.event.issue.pull_request
     runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,7 +55,6 @@ jobs:
         if: steps.review.outputs.rework != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MODE: ${{ steps.review.outputs.rework }}
           SLOT: ${{ steps.review.outputs.slot }}
           PR: ${{ steps.review.outputs.pr }}

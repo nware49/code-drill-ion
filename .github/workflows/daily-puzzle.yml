@@ -14,6 +14,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write # Workload Identity Federation: trade a GitHub token for a Claude API token
 
 concurrency:
   group: daily-puzzle
@@ -22,6 +23,11 @@ concurrency:
 jobs:
   plan:
     runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,7 +46,6 @@ jobs:
       - name: Plan the puzzle
         id: plan
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WIKIMEDIA_USER_AGENT: ${{ vars.WIKIMEDIA_USER_AGENT }}
           DATE_INPUT: ${{ inputs.date }}
         run: node scripts/plan-puzzle.mjs ${DATE_INPUT:+--date "$DATE_INPUT"} --generate --skip-existing --body "$RUNNER_TEMP/pr.md"

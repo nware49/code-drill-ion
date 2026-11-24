@@ -1,0 +1,42 @@
+name: Check Claude sign-in
+
+# Run by hand from the Actions tab (on main) to test Workload Identity Federation without
+# calling Claude: it trades a GitHub OIDC token for a Claude API token and prints the
+# response with the token redacted. Run it while the Claude Console's "Test the connection"
+# step is listening, or whenever sign-in fails. A denial shows why under Authentication
+# history on the Workload identity page in the Claude Console.
+on: workflow_dispatch
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  exchange:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+    steps:
+      - name: Fetch GitHub OIDC token
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const token = await core.getIDToken('https://api.anthropic.com');
+            core.setSecret(token);
+            core.exportVariable('JWT', token);
+
+      - name: Exchange for an Anthropic access token
+        run: |
+          jq -n --arg jwt "$JWT" '{
+            grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            assertion: $jwt,
+            federation_rule_id: env.ANTHROPIC_FEDERATION_RULE_ID,
+            organization_id: env.ANTHROPIC_ORGANIZATION_ID,
+            service_account_id: env.ANTHROPIC_SERVICE_ACCOUNT_ID,
+            workspace_id: env.ANTHROPIC_WORKSPACE_ID
+          }' | curl -sS --fail-with-body https://api.anthropic.com/v1/oauth/token \
+            -H "content-type: application/json" --data @- \
+            | jq 'with_entries(if (.key | test("token$")) then .value = "<redacted>" else . end)'

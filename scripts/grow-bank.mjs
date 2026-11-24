@@ -4,7 +4,7 @@
 //   node scripts/grow-bank.mjs --propose 3 --expand 0 three new prompts only
 //   node scripts/grow-bank.mjs --expand-ids sorting,git --add 80
 //   options: --no-verify  --no-views  --summary out.md  --body pr.md  --dry-run (nothing written)
-// Needs ANTHROPIC_API_KEY.
+// Needs Claude credentials: ANTHROPIC_API_KEY locally, Workload Identity Federation in GitHub Actions.
 import { writeFileSync, appendFileSync } from 'node:fs';
 import { loadBank, isLive } from './lib/bank.mjs';
 import { loadConfig, parseArgs } from './lib/config.mjs';

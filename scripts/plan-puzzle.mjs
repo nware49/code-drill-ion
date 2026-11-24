@@ -38,8 +38,9 @@ const freshCount = () => bank.filter((p) => gapFor(usage, p.id, date) > config.n
 // Grow the bank first when there aren't enough unused prompts for a month without repeats.
 let generated = null;
 if (args.generate && freshCount() < config.minFreshPrompts) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn(`Only ${freshCount()} fresh prompts and no ANTHROPIC_API_KEY; planning without new prompts.`);
+  const { hasClaudeCredentials } = await import('./lib/claude.mjs');
+  if (!hasClaudeCredentials()) {
+    console.warn(`Only ${freshCount()} fresh prompts and no Claude credentials; planning without new prompts.`);
   } else {
     const { createClaude } = await import('./lib/claude.mjs');
     const { growBank } = await import('./lib/grow.mjs');
