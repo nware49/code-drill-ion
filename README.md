@@ -39,7 +39,7 @@ The format comes from three daily games, combined and moved into software engine
 
 | From | What it contributed |
 |---|---|
-| [Krillion](https://krillion.io) | Rarity-weighted answers and the depth metaphor: better answers dive you deeper, and points become meters |
+| [Krillion](https://krillion.io) | Rarity-weighted answers and the depth metaphor (better answers dive you deeper, and points become meters), and the pixel-art style of its deep dive |
 | [MedRare](https://medrare.io) | The same loop for one profession (medicine), with tiers named after anatomical depth and a reference for every answer |
 | [Kabloom](https://kabloom.io) | No answer can be used twice, and a final question that calls back to an earlier one |
 
@@ -47,14 +47,30 @@ New here: a drilling rig instead of a dive, with layers of the Earth as the tier
 
 ## Artwork
 
-All the art is drawn procedurally with Canvas 2D from seeded randomness (`js/art.js`), so it is identical on every load and the game ships with no image files:
+The whole site sits on one pixel-art picture of the Earth, styled after Krillion's deep dive but going down instead of under. It is painted procedurally in `js/art.js` from seeded noise, small palettes and ordered (Bayer) dithering, so it looks the same on every visit and the game ships with no image files. One art pixel is 3 to 5 screen pixels, scaled up with `image-rendering: pixelated`.
 
-- **The rig**, a tracked drilling machine whose cab window is a terminal prompt, drills down a borehole as you score. During play the camera follows it; on the results screen you see the whole dive.
-- **The autocomplete** is a small robot that waits on the surface. On the results screen its grey rig shows how deep it got on the same drill.
-- **The layers** are textured from real geology: roots and pebbles in the topsoil; sedimentary strata in the crust, with fossil ammonites and trilobites next to floppy disks and punch cards; magma veins and green olivine in the upper mantle; blue ringwoodite in the transition zone; slow convection swirls and plumes in the lower mantle; the D″ layer; liquid-iron flow and magnetic field lines in the outer core; iron crystals in the inner core. The nether is an amethyst geode holding root's key.
-- **Tier badges** illustrate each layer on the home page, in the help dialog and on every answer card.
+From the top:
 
-Layer boundaries in the cross-section are the real seismic depths in km. Thin layers are drawn taller so they stay visible.
+- **The surface** at dusk: stars, drifting clouds, a low sun behind purple mountains, pine trees, the drill pad, a control hut and the autocomplete robot waiting by the rig.
+- **Topsoil** with roots, pebbles, a buried bone and wriggling worms.
+- **The crust**: sandstone, shale, limestone and a coal seam, with fossils from two kinds of history (ammonites and trilobites next to floppy disks, punch cards, vacuum tubes and cassettes).
+- **The caves**: boulder walls, stalactites, stalagmites, pools, glowworms, glowing mushrooms and bats.
+- **The mines**: timbered galleries with rails, a moving mine cart, lanterns, a ladder, gold and copper ore.
+- **Deep crust** in banded gneiss, then the Moho.
+- **The upper mantle**: flowing peridotite, olivine crystals, magma pockets and veins, and diamonds around 150 km.
+- **The transition zone** with blue ringwoodite crystals.
+- **The lower mantle**: convection swirls, a rising plume and a sinking slab of old seafloor.
+- **D″** with its two continent-sized blobs, then **the outer core** of flowing liquid iron and magnetic field lines, and **the inner core** of iron crystals.
+- **The nether**: an amethyst geode at the center of the Earth, where root's golden key floats.
+
+Every layer is placed at its real depth, and notes beside the descent mark real facts at real depths (the deepest cave, the deepest mine, the Kola Superdeep Borehole, the 410 and 660 km discontinuities, Inge Lehmann's inner core). Thin layers people care about, like the caves and the mines, are drawn taller so the rig spends time passing them.
+
+- **Home** is a scroll down the column: each tier card stops over its layer.
+- **During a drill** the camera follows the rig. A scored answer drills it down to the new depth with debris, a landing shake and the points popping up beside it; deep answers flash, root flashes purple; wrong guesses make the bit sputter, and the screen edge glows red in the last five seconds. The rig's lamp lights up the dark layers.
+- **Results** park the camera at your final depth and show a compact cross-section with your rig and the autocomplete's grey one.
+- **Tier badges** are 24×24 pixel vignettes, and the wordmark is a pixel font filled with the layers of the Earth.
+
+Everything respects `prefers-reduced-motion`: the rig jumps instead of drilling and nothing moves on its own.
 
 ## How each day's puzzle is made
 
@@ -124,9 +140,9 @@ Set `<meta name="drill:share-url">` in `index.html` to your public URL if you wa
 
 ```
 index.html                 page shell (home, play, results views and dialogs)
-styles.css                 all styling; light and dark themes
+styles.css                 all styling: pixel-framed panels over the world canvas
 js/engine.js               game logic: matching, scoring, puzzle files, the fallback generator
-js/art.js                  procedural artwork: the rig, the robot, layer textures, badges, scenes
+js/art.js                  procedural pixel art: the Earth column, rig, robot, creatures, depth notes, badges, wordmark
 js/app.js                  rendering, timer, storage, loading puzzles
 bank/prompts/*.json        the answer bank, one prompt per file, one answer per line
 puzzles/YYYY-MM-DD.json    approved daily puzzles

@@ -5,158 +5,238 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Code Drillion</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="A daily trivia drill for software engineers. Obvious answers barely scratch the topsoil. Deep cuts drill you toward the center of the Earth.">
+<meta name="description" content="A daily trivia drill for software engineers. Obvious answers barely scratch the topsoil. Deep cuts drill you through the caves, the mines and the mantle toward the center of the Earth.">
+<meta name="theme-color" content="#0b0807">
 <meta name="drill:share-url" content="https://codedrillion.com">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315181d'/%3E%3Cpath d='M13 4h6v6l-6 3zM13 15l6-3v5l-6 3zM13 22l6-3v3l-3 7-3-7z' fill='%23ffb94c'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%230b0807'/%3E%3Cpath d='M5 1h6v1H5zM4 2h8v6H4z' fill='%2362c3d9'/%3E%3Cpath d='M5 3h4v3H5z' fill='%230d1116'/%3E%3Cpath d='M6 4h1v1H6z' fill='%23ffb94c'/%3E%3Cpath d='M4 6h8v1H4z' fill='%23ffd25d'/%3E%3Cpath d='M5 8h6v2H5zM6 10h4v2H6zM7 12h2v3H7z' fill='%23a9b3bc'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Pixelify+Sans:wght@500;600;700&family=VT323&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- The Earth, painted in pixels behind everything. Purely decorative: depth is also given in text. -->
+<div class="world" id="world" aria-hidden="true">
+  <div class="world-shake">
+    <canvas></canvas>
+    <div class="world-labels"></div>
+  </div>
+  <div class="world-flash"></div>
+</div>
+<div class="crt" aria-hidden="true"></div>
+<div class="edge" aria-hidden="true"></div>
+
 <div class="app">
   <header class="topbar">
-    <button class="brand" id="brand" type="button" aria-label="Code Drillion, back to the start">
-      <svg class="bit" viewBox="0 0 12 26" aria-hidden="true"><path d="M3 0h6v6L3 9zM3 11l6-3v5l-6 3zM3 18l6-3v3l-3 8-3-8z"/></svg>
-      <span class="wordmark">code<span>drillion</span></span>
-    </button>
-    <nav class="top-actions" aria-label="Game menu">
-      <button type="button" class="chip-btn" id="open-help">How to play</button>
-      <button type="button" class="chip-btn" id="open-stats">Stats</button>
-      <button type="button" class="chip-btn square" id="toggle-theme" aria-label="Color theme: follow system" title="Color theme">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg>
+    <div class="topbar-in">
+      <button class="brand" id="brand" type="button" aria-label="Code Drillion, back to the surface">
+        <svg class="brand-bit" viewBox="0 0 9 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="#1a1410" d="M1 0h7v1H1zM0 1h1v6H0zM8 1h1v6H8zM1 6h7v1H1zM2 7h5v1H2zM3 8h3v2H3zM4 10h1v2H4z"/><path fill="#62c3d9" d="M1 1h7v3H1z"/><path fill="#0d1116" d="M2 2h3v2H2z"/><path fill="#ffb94c" d="M2 2h1v1H2z"/><path fill="#ffd25d" d="M1 4h1v1H1zM3 4h1v1H3zM5 4h1v1H5zM7 4h1v1H7z"/><path fill="#2b6c82" d="M1 5h7v1H1z"/><path fill="#a9b3bc" d="M3 7h3v1H3zM4 8h1v2H4z"/></svg>
+        <span class="brand-name">Code<span>Drillion</span></span>
       </button>
-    </nav>
+      <nav class="top-actions" aria-label="Game menu">
+        <button type="button" class="px-chip" id="open-help"><span class="wide-only">How to play</span><span class="narrow-only" aria-hidden="true">Help</span><span class="sr narrow-sr">How to play</span></button>
+        <button type="button" class="px-chip" id="open-stats">Stats</button>
+      </nav>
+    </div>
   </header>
 
   <main id="main">
-    <!-- HOME ------------------------------------------------------------ -->
+    <!-- HOME: the surface, then a descent through every layer ------------- -->
     <section id="view-home" class="view home" aria-labelledby="home-title">
-      <div class="home-grid">
-        <div class="home-copy">
-          <p class="eyebrow" id="home-meta">The daily drill</p>
-          <h1 id="home-title" class="hero-title">Mine your software knowledge with the daily Code Drill.<span class="caret" aria-hidden="true"></span></h1>
-          <p class="lede">Seven prompts. Thirty seconds each. Name anything that fits. The answer everyone gives barely scratches the topsoil. The one only you would think of drills straight into the inner core.</p>
-          <div class="cta">
-            <button class="btn primary" id="start-daily" type="button">Start today&rsquo;s drill</button>
-            <button class="btn" id="start-practice" type="button">Practice drill</button>
-          </div>
-          <p class="cta-note" id="home-status" aria-live="polite"></p>
-
-          <ol class="rules">
-            <li><b>Type any valid answer.</b> Wrong guesses only cost time. Case, punctuation and small typos don&rsquo;t matter.</li>
-            <li><b>Rarer answers drill deeper.</b> Every answer sits in a layer of the Earth, from topsoil (10 points) down to the inner core (100).</li>
-            <li><b>Every answer works once.</b> Use one twice across the six prompts and you get a use-after-free.</li>
-            <li><b>The seventh prompt is root.</b> A trivia question with one right answer, hidden in the nether and worth 100. Any answer counts there, even one you already used.</li>
-          </ol>
+      <div class="hero">
+        <div class="hero-sky">
+          <p class="hero-meta" id="home-meta">The daily drill</p>
+          <h1 id="home-title" class="wordmark"><span class="sr">Code Drillion</span><span class="wm-code" data-word="CODE" aria-hidden="true"></span><span class="wm-main" data-word="DRILLION" aria-hidden="true"></span></h1>
+          <p class="tagline">Mine your software knowledge with the daily Code Drill.</p>
+          <p class="subline">7 prompts <i>·</i> 30 seconds each <i>·</i> rarer answers drill deeper</p>
         </div>
-
-        <figure class="ladder" aria-labelledby="ladder-cap">
-          <figcaption id="ladder-cap" class="ladder-cap"><span>Layer</span><span>Points</span></figcaption>
-          <div class="ladder-body">
-            <canvas class="ladder-scene" id="home-scene" aria-hidden="true"></canvas>
-            <ol class="strata" id="strata">
-              <li class="stratum t0" data-layer="topsoil"><span class="s-art" data-badge="topsoil" aria-hidden="true"></span><span class="s-name">topsoil <em>autocomplete</em></span><span class="s-sub">What everyone, and every model, says first.</span><span class="s-pts">10</span></li>
-              <li class="stratum t1" data-layer="crust"><span class="s-art" data-badge="crust" aria-hidden="true"></span><span class="s-name">crust</span><span class="s-sub">Solid working knowledge.</span><span class="s-pts">25</span></li>
-              <li class="stratum t2" data-layer="upper"><span class="s-art" data-badge="upper" aria-hidden="true"></span><span class="s-name">upper mantle</span><span class="s-sub">You&rsquo;ve shipped it and read the docs.</span><span class="s-pts">40</span></li>
-              <li class="stratum t3" data-layer="lower"><span class="s-art" data-badge="lower" aria-hidden="true"></span><span class="s-name">lower mantle</span><span class="s-sub">Specialist knowledge.</span><span class="s-pts">60</span></li>
-              <li class="stratum t4" data-layer="outer"><span class="s-art" data-badge="outer" aria-hidden="true"></span><span class="s-name">outer core</span><span class="s-sub">You were there, or you read the postmortem.</span><span class="s-pts">80</span></li>
-              <li class="stratum t5" data-layer="inner"><span class="s-art" data-badge="inner" aria-hidden="true"></span><span class="s-name">inner core</span><span class="s-sub">Below everything. Nobody expects it.</span><span class="s-pts">100</span></li>
-              <li class="stratum troot" data-layer="nether"><span class="s-art" data-badge="nether" aria-hidden="true"></span><span class="s-name">the nether <em>root</em></span><span class="s-sub">The seventh prompt&rsquo;s one answer.</span><span class="s-pts">100</span></li>
-            </ol>
+        <div class="surface-mark" data-zone="surface" aria-hidden="true"></div>
+        <div class="hero-ground">
+          <button class="px-btn primary big" id="start-daily" type="button">Start today&rsquo;s drill</button>
+          <p class="cta-note" id="home-status" aria-live="polite"></p>
+          <div class="cta-row">
+            <button class="px-btn small" id="start-practice" type="button">Practice <span aria-hidden="true">∞</span></button>
+            <button class="px-btn small" id="open-archive" type="button">Archive <span aria-hidden="true">⟲</span></button>
           </div>
-          <p class="ladder-foot">Every point is about 9 km of drilling. A perfect drill scores 700 and reaches <b>6,371 km</b>, the center of the Earth.</p>
-        </figure>
+          <a class="dig-hint" href="#strata-title">What&rsquo;s down there <span aria-hidden="true">▼</span></a>
+        </div>
       </div>
 
-      <section class="why" aria-labelledby="why-title">
-        <h2 id="why-title">Why this exists</h2>
-        <div class="why-cols">
-          <p>A language model is built to produce the most probable next token. Ask one to name a sorting algorithm and you&rsquo;ll hear quicksort, every time. That&rsquo;s the autocomplete layer, and here it&rsquo;s worth 10 points.</p>
-          <p>Everything below it comes from somewhere else: the outage you were paged for, the RFC you read for fun, the man page you actually finished, the codebase you inherited and came to understand. That knowledge still matters. It&rsquo;s how you tell when generated code is wrong, and it&rsquo;s what this game scores.</p>
-        </div>
+      <section class="intro px-panel" aria-labelledby="rules-title">
+        <h2 id="rules-title" class="panel-title">How a drill works</h2>
+        <ol class="rules">
+          <li><b>Type any valid answer.</b> Wrong guesses only cost time. Case, punctuation and small typos don&rsquo;t matter.</li>
+          <li><b>Rarer answers drill deeper.</b> Every answer sits in a layer of the Earth, from topsoil (10 points) down to the inner core (100).</li>
+          <li><b>Every answer works once.</b> Use one twice across the six prompts and you get a use-after-free.</li>
+          <li><b>The seventh prompt is root.</b> A trivia question with one right answer, hidden in the nether and worth 100. Any answer counts there, even one you already used.</li>
+        </ol>
+        <p class="intro-foot">Every point is about 9 km of drilling. A perfect drill scores 700 and reaches <b>6,371 km</b>, the center of the Earth.</p>
+      </section>
+
+      <div class="descent">
+        <h2 id="strata-title" class="descent-title">Every answer sits in a layer</h2>
+        <article class="layer-card px-panel t0" data-zone="topsoil" data-at="0.6">
+          <span class="layer-badge" data-badge="topsoil" aria-hidden="true"></span>
+          <div class="layer-body">
+            <p class="layer-pts"><b>10</b> pts</p>
+            <h3>Topsoil <em>the autocomplete layer</em></h3>
+            <p>What everyone, and every model, says first. Quicksort. Python. Port 80.</p>
+          </div>
+        </article>
+        <article class="layer-card px-panel t1" data-zone="caves" data-at="0.5">
+          <span class="layer-badge" data-badge="crust" aria-hidden="true"></span>
+          <div class="layer-body">
+            <p class="layer-pts"><b>25</b> pts</p>
+            <h3>Crust <em>solid ground</em></h3>
+            <p>Solid working knowledge. The caves, the mines and the deepest hole ever drilled are all up here.</p>
+          </div>
+        </article>
+        <article class="layer-card px-panel t2" data-zone="upper" data-at="0.45">
+          <span class="layer-badge" data-badge="upper" aria-hidden="true"></span>
+          <div class="layer-body">
+            <p class="layer-pts"><b>40</b> pts</p>
+            <h3>Upper mantle <em>olivine and magma</em></h3>
+            <p>You&rsquo;ve shipped it and read the docs. Diamonds form down here.</p>
+          </div>
+        </article>
+        <article class="layer-card px-panel t3" data-zone="lower" data-at="0.45">
+          <span class="layer-badge" data-badge="lower" aria-hidden="true"></span>
+          <div class="layer-body">
+            <p class="layer-pts"><b>60</b> pts</p>
+            <h3>Lower mantle <em>deep and slow</em></h3>
+            <p>Specialist knowledge. Two thousand kilometers of rock that flows like syrup over millions of years.</p>
+          </div>
+        </article>
+        <article class="layer-card px-panel t4" data-zone="outer" data-at="0.45">
+          <span class="layer-badge" data-badge="outer" aria-hidden="true"></span>
+          <div class="layer-body">
+            <p class="layer-pts"><b>80</b> pts</p>
+            <h3>Outer core <em>liquid iron</em></h3>
+            <p>You were there, or you read the postmortem.</p>
+          </div>
+        </article>
+        <article class="layer-card px-panel t5" data-zone="inner" data-at="0.3">
+          <span class="layer-badge" data-badge="inner" aria-hidden="true"></span>
+          <div class="layer-body">
+            <p class="layer-pts"><b>100</b> pts</p>
+            <h3>Inner core <em>solid iron</em></h3>
+            <p>Below everything. Nobody expects it.</p>
+          </div>
+        </article>
+        <article class="layer-card px-panel troot" data-zone="inner" data-at="0.93">
+          <span class="layer-badge" data-badge="nether" aria-hidden="true"></span>
+          <div class="layer-body">
+            <p class="layer-pts"><b>100</b> pts</p>
+            <h3>The nether <em>root</em></h3>
+            <p>A geode at the center of the Earth. The seventh prompt&rsquo;s one right answer is kept here.</p>
+          </div>
+        </article>
+      </div>
+
+      <section class="why px-panel" aria-labelledby="why-title" data-zone="center">
+        <h2 id="why-title" class="panel-title">Why this exists</h2>
+        <p>A language model is built to produce the most probable next token. Ask one to name a sorting algorithm and you&rsquo;ll hear quicksort, every time. That&rsquo;s the autocomplete layer, and here it&rsquo;s worth 10 points.</p>
+        <p>Everything below it comes from somewhere else: the outage you were paged for, the RFC you read for fun, the man page you actually finished, the codebase you inherited and came to understand. That knowledge still matters. It&rsquo;s how you tell when generated code is wrong, and it&rsquo;s what this game scores.</p>
         <p class="why-note" id="bank-note">Answers are checked against a curated bank that keeps growing, and every answer carries a line of history. Rarity blends hand ranking with how often people look each answer up on Wikipedia.</p>
+        <button class="px-btn primary" id="start-bottom" type="button">Back to the surface <span aria-hidden="true">▲</span></button>
       </section>
     </section>
 
     <!-- PLAY ------------------------------------------------------------ -->
     <section id="view-play" class="view play" hidden aria-label="Drill in progress">
-      <aside class="core" aria-label="Depth so far">
-        <div class="core-read">
-          <span class="label">Depth</span>
-          <strong class="core-num"><span id="depth-num">0</span><small>km</small></strong>
-          <span class="core-sub" id="depth-sub">the surface</span>
+      <div class="hud">
+        <div class="pod">
+          <span class="pod-label">Depth</span>
+          <strong class="pod-num"><span id="depth-num">0</span><small>km</small></strong>
+          <span class="pod-sub" id="depth-sub">the surface</span>
         </div>
-        <div class="scene-wrap" id="scene-wrap" role="img" aria-label="Depth 0 km">
-          <canvas class="play-scene" id="play-scene"></canvas>
+        <div class="hud-mid">
+          <ol class="cells" id="core-cells"></ol>
+          <span class="hud-count" id="q-count">Prompt 1 of 7</span>
         </div>
-        <ol class="core-cells" id="core-cells"></ol>
-      </aside>
+        <div class="pod right">
+          <span class="pod-label">Score</span>
+          <strong class="pod-num" id="score-num">0</strong>
+          <span class="pod-sub" id="score-hex">0x000</span>
+        </div>
+      </div>
+      <p class="sr" id="scene-desc"></p>
 
-      <div class="console">
-        <div class="console-head">
-          <span class="label" id="q-count">Prompt 1 of 7</span>
+      <div class="prompt-card px-panel" id="prompt-card">
+        <div class="card-head">
+          <span class="card-label" id="q-label">Drill</span>
           <span class="tag" id="q-cat"></span>
-          <span class="clock" id="q-clock"><span id="q-secs">30</span>s</span>
         </div>
-        <div class="timebar" aria-hidden="true"><i id="timebar-fill"></i></div>
-
-        <p class="root-flag" id="root-flag" hidden>Root prompt. Exactly one right answer, worth 100.</p>
+        <p class="root-flag" id="root-flag" hidden>Root prompt · one right answer · 100 pts</p>
         <h2 class="prompt" id="q-text">Name a sorting algorithm.</h2>
         <p class="prompt-hint" id="q-hint"></p>
-
-        <div id="answer-zone" class="answer-zone">
-          <ol class="log" id="log" aria-live="polite"></ol>
-          <form class="shell" id="answer-form" autocomplete="off" novalidate>
-            <label class="ps1" for="answer"><span class="sr">Your answer</span><span aria-hidden="true">$</span></label>
-            <input id="answer" name="answer" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" writingsuggestions="false" enterkeyhint="send" maxlength="80">
-            <button class="btn primary small" type="submit">Enter</button>
-          </form>
-          <div class="console-foot">
-            <button class="btn ghost small" id="pass-btn" type="button">Pass for 0</button>
-            <div class="freed" id="freed" hidden><span class="label">Spent</span><span id="freed-list"></span></div>
-          </div>
-        </div>
-
-        <div class="reveal" id="reveal" hidden tabindex="-1"></div>
       </div>
+
+      <div id="answer-zone" class="dock">
+        <div class="gauge" aria-hidden="true">
+          <span class="clock" id="q-clock"><span id="q-secs">30</span></span>
+          <div class="timebar"><i id="timebar-fill"></i></div>
+        </div>
+        <form class="shell" id="answer-form" autocomplete="off" novalidate>
+          <label class="ps1" for="answer"><span class="sr">Your answer</span><span aria-hidden="true">$</span></label>
+          <input id="answer" name="answer" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" writingsuggestions="false" enterkeyhint="send" maxlength="80">
+          <button class="px-btn primary small drill-btn" type="submit">Drill <span aria-hidden="true">▼</span></button>
+        </form>
+        <ol class="log" id="log" aria-live="polite"></ol>
+        <div class="console-foot">
+          <button class="px-btn small ghost" id="pass-btn" type="button">Pass for 0</button>
+          <div class="freed" id="freed" hidden><span class="label">Spent</span><span id="freed-list"></span></div>
+        </div>
+      </div>
+
+      <div class="reveal" id="reveal" hidden tabindex="-1"></div>
     </section>
 
     <!-- RESULTS --------------------------------------------------------- -->
     <section id="view-results" class="view results" hidden aria-labelledby="res-rank">
-      <div class="res-top">
-        <div class="res-head">
-          <p class="eyebrow" id="res-label">Drill complete</p>
-          <p class="res-depth"><strong id="res-num">0</strong><span class="res-unit">km</span><span class="res-of"><span id="res-pts">0</span> / 700 points &middot; <code id="res-hex">0x000</code></span></p>
-          <h2 class="res-rank" id="res-rank">Still on the surface</h2>
-          <p class="res-line" id="res-line"></p>
-          <p class="res-vs" id="res-vs"></p>
-        </div>
-        <div class="share">
-          <pre class="share-text" id="share-text"></pre>
-          <div class="share-row">
-            <button class="btn primary" id="share-btn" type="button">Copy result</button>
-            <span class="share-status" id="share-status" role="status"></span>
+      <div class="res-grid">
+        <figure class="journey px-panel">
+          <div class="xsec">
+            <canvas class="res-scene" id="res-scene" role="img" aria-label="Your drill"></canvas>
+            <ol class="xsec-labels" id="xsec-labels" aria-hidden="true"></ol>
+            <span class="xsec-tag you" aria-hidden="true"></span>
+            <span class="xsec-tag ghost" aria-hidden="true"></span>
           </div>
-        </div>
-      </div>
-
-      <div class="res-journey">
-        <figure class="journey">
-          <canvas class="res-scene" id="res-scene" role="img" aria-label="Your drill"></canvas>
           <figcaption class="fine">Layer depths are real. Thin layers are drawn taller so you can see them.</figcaption>
         </figure>
-        <div class="res-detail">
-          <div class="res-core" id="res-core"></div>
-          <ol class="recap" id="recap"></ol>
-        </div>
-      </div>
 
-      <div class="res-foot">
-        <p class="next-drill" id="next-drill"></p>
-        <div class="cta">
-          <button class="btn" id="res-practice" type="button">Practice drill</button>
-          <button class="btn ghost" id="res-home" type="button">Home</button>
+        <div class="res-main">
+          <div class="res-head px-panel">
+            <p class="eyebrow" id="res-label">Drill complete</p>
+            <p class="res-depth"><strong id="res-num">0</strong><span class="res-unit">km</span></p>
+            <p class="res-of"><span id="res-pts">0</span> / 700 points &middot; <code id="res-hex">0x000</code></p>
+            <h2 class="res-rank" id="res-rank">Still on the surface</h2>
+            <p class="res-line" id="res-line"></p>
+            <p class="res-vs" id="res-vs"></p>
+            <div class="share">
+              <pre class="share-text" id="share-text"></pre>
+              <div class="share-row">
+                <button class="px-btn primary" id="share-btn" type="button">Copy result</button>
+                <span class="share-status" id="share-status" role="status"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="res-detail px-panel">
+            <h3 class="panel-title">Your dive, prompt by prompt</h3>
+            <div class="res-core" id="res-core"></div>
+            <ol class="recap" id="recap"></ol>
+          </div>
+
+          <div class="res-foot">
+            <p class="next-drill" id="next-drill"></p>
+            <div class="cta-row">
+              <button class="px-btn" id="res-practice" type="button">Practice drill</button>
+              <button class="px-btn ghost" id="res-home" type="button">Back to the surface <span aria-hidden="true">▲</span></button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -4,7 +4,7 @@ import {
   dayNumber, dateForDay, hex, rankFor, depthOf, shareText, rng, shuffle, autocompleteDepth,
   kmFor, fmtKm, layerAt, isoForDay, fromPuzzle,
 } from './engine.js';
-import { DrillScene, badgeURL } from './art.js';
+import { World, CrossSection, badgeURL, wordmarkSVG } from './art.js';
 
 const SUGGEST_URL = 'https://github.com/nware49/code-drill-ion/issues/new';
 const STORE_KEY = 'code-drillion:v1';
@@ -94,7 +94,9 @@ let timerId = 0;
 let log = [];
 let view = 'home';
 let sceneSynced = false; // false right after a drill is loaded, so the rig jumps instead of drilling
-const scenes = {};
+let world = null;  // the pixel Earth behind the page
+let xsec = null;   // the cross-section on the results screen
+let depthAnim = 0;
 
 const secondsPerPrompt = () => (store.settings.extended ? SECONDS_EXTENDED : SECONDS);
 const spentMap = () => new Map(game.spent);
@@ -179,7 +181,14 @@ function enter() {
 function showView(name) {
   view = name;
   for (const v of ['home', 'play', 'results']) $(`view-${v}`).hidden = v !== name;
-  window.scrollTo({ top: 0 });
+  document.body.dataset.view = name;
+  if (name !== 'play') setDanger(false);
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  world?.setMode(name);
+}
+
+function setDanger(on) {
+  document.body.classList.toggle('danger', !!on);
 }
 
 function goHome() {
@@ -227,9 +236,18 @@ function showPlay() {
 
 function renderPlay() {
   const prompt = items[game.idx];
-  $('q-count').textContent = `${drillLabel(game)} · prompt ${game.idx + 1} of ${items.length}`;
+  $('q-count').textContent = prompt.trap ? `Root · ${game.idx + 1} of ${items.length}` : `Prompt ${game.idx + 1} of ${items.length}`;
+  $('q-label').textContent = drillLabel(game);
   $('q-cat').textContent = prompt.cat;
   $('root-flag').hidden = !prompt.trap;
+  const card = $('prompt-card');
+  card.classList.toggle('is-root', !!prompt.trap);
+  if (card.dataset.idx !== String(game.idx)) {
+    card.dataset.idx = String(game.idx);
+    card.style.animation = 'none';
+    void card.offsetWidth;
+    card.style.animation = '';
+  }
   $('q-text').textContent = prompt.q;
   $('q-hint').textContent = prompt.hint || '';
 
@@ -281,6 +299,7 @@ function renderClock(left) {
   const clock = $('q-clock');
   const bar = $('timebar-fill');
   if (left === null) {
+    setDanger(false);
     clock.className = 'clock stopped';
     $('q-secs').textContent = String(Math.max(0, Math.ceil((game.results[game.idx]?.left ?? 0) / 1000)));
     bar.style.transform = 'scaleX(0)';
@@ -291,6 +310,7 @@ function renderClock(left) {
   const secs = Math.ceil(left / 1000);
   $('q-secs').textContent = String(secs);
   const low = secs <= 5;
+  setDanger(low && view === 'play');
   clock.className = low ? 'clock low' : 'clock';
   bar.parentElement.classList.toggle('low', low);
   bar.style.transform = `scaleX(${Math.max(0, Math.min(1, left / total))})`;
@@ -341,6 +361,7 @@ function onSubmit(event) {
     addLog(typed, `Not in the bank. Try another. ${suggestLink(typed, prompt)}`, 'miss');
   }
   input.value = '';
+  world?.sputter(false);
   const shell = $('answer-form');
   shell.classList.remove('shake');
   void shell.offsetWidth;
@@ -366,6 +387,12 @@ function resolvePrompt(kind, answer, extra = {}) {
   game.deadline = null;
   persist();
   renderPlay();
+  if (result.status === 'hit') {
+    world?.float(`+${result.pts}<small>${esc(tierName(result.tier))}</small>`, result.tier === 'root' ? 'root' : '');
+  } else {
+    world?.sputter(true);
+    world?.float(`+0<small>${result.status === 'timeout' ? 'out of time' : 'passed'}</small>`, 'miss');
+  }
   $('next-btn')?.focus({ preventScroll: true });
 }
 
@@ -425,9 +452,9 @@ function resultCardHtml(prompt, r) {
     const t = r.tier;
     const lore = loreFor(prompt, r.key);
     const typedNote = r.corrected ? `<small>autocorrected from “${esc(r.typed)}”</small>` : '';
-    const rootNote = prompt.trap ? '<p class="hit-note">Root access granted.</p>' : '';
-    return `<div class="hit art ${tierClass(t)}">
-      <img class="hit-art" src="${badgeURL(tierArt(t), 84)}" alt="">
+    const rootNote = prompt.trap ? '<p class="hit-note root-note">Root access granted.</p>' : '';
+    return `<div class="hit art px-panel ${tierClass(t)}">
+      <img class="hit-art" src="${badgeURL(tierArt(t))}" alt="" width="96" height="96">
       <div class="hit-body">
         <div class="hit-top"><span class="tier ${tierClass(t)}">${esc(tierName(t))} · ${esc(tierSub(t))}</span><span class="hit-pts">+${r.pts}<small>${fmtKm(kmFor(r.pts))} deeper</small></span></div>
         <p class="hit-answer">${esc(r.name)}${typedNote}</p>
@@ -444,7 +471,7 @@ function resultCardHtml(prompt, r) {
     body += `<p class="hit-answer">${esc(a.n)}<small>the one right answer</small></p>`;
     if (a.l) body += `<p class="hit-lore">${esc(a.l)}</p>`;
   }
-  return `<div class="hit tmiss">
+  return `<div class="hit px-panel tmiss">
     <div class="hit-top"><span class="tier tmiss">${head}</span><span class="hit-pts">+0</span></div>
     ${body}
   </div>`;
@@ -454,9 +481,9 @@ function renderReveal() {
   const prompt = items[game.idx];
   const r = game.results[game.idx];
   let html = resultCardHtml(prompt, r);
-  if (!prompt.trap) html += autoSaidHtml(prompt) + cutsHtml(prompt, r.key);
+  if (!prompt.trap) html += `<div class="more-card px-panel">${autoSaidHtml(prompt)}${cutsHtml(prompt, r.key)}</div>`;
   html += `<div class="reveal-actions">
-    <button class="btn primary" id="next-btn" type="button">${isLast() ? 'See results' : 'Next prompt'}</button>
+    <button class="px-btn primary" id="next-btn" type="button">${isLast() ? 'See how deep you got' : 'Drill on <span aria-hidden="true">▼</span>'}</button>
     <span class="fine">or press Enter</span>
   </div>`;
   $('reveal').innerHTML = html;
@@ -491,18 +518,42 @@ function describeDepth(results) {
 function renderCore() {
   const { depth } = segments(game.results);
   const km = kmFor(depth);
-  $('depth-num').textContent = km.toLocaleString('en-US');
-  $('depth-sub').textContent = `${layerAt(km).name} \u00b7 ${depth} pts`;
-  $('scene-wrap').setAttribute('aria-label', describeDepth(game.results));
-  scenes.play?.setDepth(km, { animate: sceneSynced });
+  $('depth-sub').textContent = layerAt(km).name;
+  $('score-num').textContent = String(depth);
+  $('score-hex').textContent = hex(depth);
+  $('scene-desc').textContent = describeDepth(game.results);
+  const shownKm = Number($('depth-num').dataset.km ?? 0);
+  let dur = 0;
+  if (world) {
+    const last = game.results[game.idx];
+    if (sceneSynced && km > world.km) dur = world.drillTo(km, { tier: last?.status === 'hit' ? last.tier : null });
+    else if (km !== world.km) world.setDepth(km);
+  }
+  countDepth(sceneSynced ? shownKm : km, km, dur);
   sceneSynced = true;
 
   $('core-cells').innerHTML = items.map((p, i) => {
     const r = game.results[i];
     const cls = r ? (r.status === 'hit' ? `${tierClass(r.tier)} done` : 'tmiss done') : (i === game.idx ? 'now' : '');
     const what = r ? (r.status === 'hit' ? `${tierName(r.tier)}, ${r.pts} points` : 'no points') : (i === game.idx ? 'current' : 'to come');
-    return `<li class="cell ${cls}"><span class="sr">Prompt ${i + 1}${p.trap ? ' (root)' : ''}: ${what}</span><b aria-hidden="true">${p.trap ? 'R' : i + 1}</b><span aria-hidden="true">${r ? r.pts : ''}</span></li>`;
+    return `<li class="cell ${cls}${p.trap ? ' root-cell' : ''}"><span class="sr">Prompt ${i + 1}${p.trap ? ' (root)' : ''}: ${what}</span><span aria-hidden="true">${p.trap ? 'R' : i + 1}</span></li>`;
   }).join('');
+}
+
+/** Run the depth readout up while the rig drills. */
+function countDepth(from, to, dur) {
+  const el = $('depth-num');
+  el.dataset.km = String(to);
+  cancelAnimationFrame(depthAnim);
+  if (!dur || from === to) { el.textContent = to.toLocaleString('en-US'); return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    const p = Math.min(1, (now - t0) / dur);
+    const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    el.textContent = Math.round(from + (to - from) * e).toLocaleString('en-US');
+    if (p < 1) depthAnim = requestAnimationFrame(step);
+  };
+  depthAnim = requestAnimationFrame(step);
 }
 
 function renderSpent() {
@@ -538,14 +589,9 @@ function showResults() {
   const verdict = diff > 0 ? `You drilled <b>${fmtKm(gap)}</b> deeper.` : diff === 0 ? 'A dead heat.' : `That\u2019s <b>${fmtKm(gap)}</b> deeper than you.`;
   $('res-vs').innerHTML = `The autocomplete stopped at <b>${fmtKm(baseKm)}</b>, in ${esc(layerAt(baseKm).name)}. It gives the likeliest answer every time: six topsoil answers, then root. ${verdict}`;
 
-  const scene = scenes.results;
-  if (scene) {
-    $('res-scene').setAttribute('aria-label', `Cross-section of the Earth. Your drill reached ${fmtKm(km)}, ${layerAt(km).name}. The autocomplete stopped at ${fmtKm(baseKm)}.`);
-    scene.setCaption([['you', '600', 10], [fmtKm(km), '600', 12]]);
-    scene.setGhost(baseKm, [['autocomplete', '600', 10], [fmtKm(baseKm), '500', 11]]);
-    scene.setDepth(0, { animate: false });
-    window.setTimeout(() => scene.setDepth(km, { duration: 1600 + Math.min(1600, km * 0.25) }), 250);
-  }
+  $('res-scene').setAttribute('aria-label', `Cross-section of the Earth. Your drill reached ${fmtKm(km)}, ${layerAt(km).name}. The autocomplete stopped at ${fmtKm(baseKm)}.`);
+  if (world && world.km !== km) world.setDepth(km);
+  xsec?.show(km, baseKm, { you: `you<b>${fmtKm(km)}</b>`, ghost: `autocomplete<b>${fmtKm(baseKm)}</b>` });
 
   const label = game.mode === 'practice' ? 'practice' : `#${game.day}`;
   $('share-text').textContent = shareText({ label, results, url: SHARE_URL, baseline: base });
@@ -573,7 +619,7 @@ function showResults() {
         <span class="rc-q">${esc(prompt.q)}</span>
         ${answerCell}
         <span class="rc-t">${tierCell}</span>
-        <span class="rc-p">${r.pts}</span>
+        <span class="rc-p ${r.status === 'hit' ? tierClass(r.tier) : 'tmiss'}">${r.pts}</span>
       </summary>
       <div class="more">${more}</div>
     </details></li>`;
@@ -630,7 +676,7 @@ function closeDialog(dlg) {
 }
 
 function renderHelp() {
-  const art = (key) => `<span class="mini-art" style="background-image:url(${badgeURL(key, 28)})"></span>`;
+  const art = (key) => `<span class="mini-art" style="background-image:url(${badgeURL(key)})"></span>`;
   const rows = TIERS.map((t) => `<li class="t${t.id}">${art(t.key)}<span class="tier t${t.id}">${esc(t.name)} · ${esc(t.sub)}</span><span>${t.pts}</span></li>`);
   rows.push(`<li class="troot">${art(ROOT.key)}<span class="tier troot">the nether · root, the seventh prompt</span><span>${ROOT.pts}</span></li>`);
   $('help-ladder').innerHTML = rows.join('');
@@ -693,26 +739,6 @@ function renderStats() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Theme                                                               */
-/* ------------------------------------------------------------------ */
-
-let themeTouched = false;
-const THEME_LABEL = { '': 'follow system', light: 'light', dark: 'dark' };
-function applyTheme() {
-  const t = store.settings.theme;
-  const root = document.documentElement;
-  if (t) { root.dataset.theme = t; themeTouched = true; }
-  else if (themeTouched) { delete root.dataset.theme; }
-  $('toggle-theme').setAttribute('aria-label', `Color theme: ${THEME_LABEL[t] ?? 'follow system'}`);
-}
-function cycleTheme() {
-  const order = ['', 'light', 'dark'];
-  store.settings.theme = order[(order.indexOf(store.settings.theme) + 1) % order.length];
-  persist();
-  applyTheme();
-}
-
-/* ------------------------------------------------------------------ */
 /* Wiring                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -725,7 +751,10 @@ function wire() {
   $('answer-form').addEventListener('submit', onSubmit);
   $('pass-btn').addEventListener('click', () => resolvePrompt('pass'));
   $('share-btn').addEventListener('click', copyShare);
-  $('toggle-theme').addEventListener('click', cycleTheme);
+  $('start-bottom').addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    $('start-daily').focus({ preventScroll: true });
+  });
 
   $('log').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-suggest]');
@@ -746,6 +775,7 @@ function wire() {
 
   $('open-help').addEventListener('click', () => { renderHelp(); openDialog($('dlg-help')); });
   $('open-stats').addEventListener('click', () => { renderStats(); openDialog($('dlg-stats')); });
+  $('open-archive').addEventListener('click', () => { renderStats(); openDialog($('dlg-stats')); });
   for (const dlg of document.querySelectorAll('dialog')) {
     dlg.addEventListener('click', (e) => {
       if (e.target === dlg || e.target.closest('[data-close]')) closeDialog(dlg);
@@ -768,19 +798,19 @@ function wire() {
   }, 1000);
 }
 
-/** Tier badges on the home ladder, and the three drilling scenes. */
+/** The pixel wordmark, tier badges, the Earth behind the page and the results cross-section. */
 function paintArt() {
-  for (const el of document.querySelectorAll('[data-badge]')) el.style.backgroundImage = `url(${badgeURL(el.dataset.badge, 40)})`;
-  scenes.home = new DrillScene($('home-scene'), { mode: 'ladder', rows: () => [...document.querySelectorAll('#strata .stratum')] });
-  scenes.play = new DrillScene($('play-scene'), { mode: 'follow' });
-  scenes.results = new DrillScene($('res-scene'), { mode: 'full', labels: true });
-  // One orchestrated moment on arrival: the rig drills from the grass down to the inner core.
-  window.setTimeout(() => scenes.home.setDepth(6200, { duration: 3200 }), 400);
+  for (const el of document.querySelectorAll('[data-word]')) {
+    el.innerHTML = wordmarkSVG(el.dataset.word, { fill: el.dataset.word === 'CODE' ? '#ffb94c' : 'strata' });
+  }
+  for (const el of document.querySelectorAll('[data-badge]')) el.style.backgroundImage = `url(${badgeURL(el.dataset.badge)})`;
+  world = new World($('world'));
+  world.setAnchors(() => document.querySelectorAll('#view-home [data-zone]'));
+  xsec = new CrossSection($('res-scene'), $('xsec-labels'));
 }
 
 async function boot(data = {}) {
   store = readStore(data.store);
-  applyTheme();
   wire();
   renderHome();
   paintArt();
