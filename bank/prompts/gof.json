@@ -1,0 +1,47 @@
+{
+  "id": "gof",
+  "cat": "design",
+  "d": 2,
+  "q": "Name a design pattern from the Gang of Four book.",
+  "strip": ["pattern"],
+  "status": "live",
+  "added": "2026-11-22",
+  "answers": [
+    {"n":"Singleton","t":0,"l":"The pattern most often called an anti-pattern since."},
+    {"n":"Factory Method","t":0,"l":"Let subclasses decide which class to instantiate.","alias":["factory"]},
+    {"n":"Observer","t":0,"l":"Every event listener you have ever written."},
+    {"n":"Strategy","t":1,"l":"Swap algorithms at runtime. A Comparator is one."},
+    {"n":"Decorator","t":1,"l":"java.io streams wrap streams that wrap streams."},
+    {"n":"Adapter","t":1,"l":"Makes the old API look like the new one.","alias":["wrapper"]},
+    {"n":"Facade","t":1,"l":"One simple front for a complicated subsystem.","alias":["façade"]},
+    {"n":"Builder","t":1,"l":"The cure for constructors with eleven parameters."},
+    {"n":"Prototype","t":2,"l":"Create objects by cloning. JavaScript takes the idea all the way down."},
+    {"n":"Abstract Factory","t":2,"l":"Families of related objects. Swing’s look-and-feel system works this way."},
+    {"n":"Command","t":2,"l":"Requests as objects. Undo stacks and job queues."},
+    {"n":"Iterator","t":2,"l":"So useful every modern language built it in."},
+    {"n":"Proxy","t":2,"l":"A stand-in that controls access. Lazy loading in ORMs."},
+    {"n":"Composite","t":2,"l":"Trees where leaves and branches share an interface. The DOM."},
+    {"n":"Template Method","t":2,"l":"A base class fixes the steps; subclasses fill them in."},
+    {"n":"State","t":2,"l":"The book’s own example is a TCPConnection."},
+    {"n":"Visitor","t":3,"l":"Double dispatch for languages without it. Compilers walking ASTs."},
+    {"n":"Chain of Responsibility","t":3,"l":"Pass the request along until someone handles it. Middleware stacks."},
+    {"n":"Mediator","t":3,"l":"Air traffic control is the textbook example."},
+    {"n":"Bridge","t":3,"l":"Separate abstraction from implementation. JDBC drivers."},
+    {"n":"Flyweight","t":3,"l":"Share the intrinsic state. Why Java caches Integer values from -128 to 127."},
+    {"n":"Memento","t":4,"l":"Capture state for undo without breaking encapsulation."},
+    {"n":"Interpreter","t":5,"l":"A class per grammar rule. The pattern people forget is in the book, and then reinvent."}
+  ],
+  "nope": {
+    "mvc": "Discussed in the book’s introduction, but not one of the 23.",
+    "dependency injection": "Named by Martin Fowler in 2004, a decade after the book.",
+    "repository": "From Fowler’s Patterns of Enterprise Application Architecture, 2002.",
+    "active record": "From Fowler’s Patterns of Enterprise Application Architecture, 2002.",
+    "pub sub": "Close to Observer. Try that.",
+    "middleware": "Close to Chain of Responsibility.",
+    "monad": "Not in this book."
+  },
+  "traps": [
+    {"q":"Name the Gang of Four pattern most often called an anti-pattern.","answer":"Singleton"},
+    {"q":"Name the pattern behind every event listener you have written.","answer":"Observer"}
+  ]
+}

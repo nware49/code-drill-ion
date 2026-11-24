@@ -1,6 +1,6 @@
 # code drillion
 
-**Drill below the autocomplete.** A daily trivia drill for software engineers, built around one idea: the obvious answer barely scratches the topsoil, and the deep cut only you would think of drills your rig toward the center of the Earth.
+**Mine your software knowledge with the daily Code Drill.** A daily trivia drill for software engineers, built around one idea: the obvious answer barely scratches the topsoil, and the deep cut only you would think of drills your rig toward the center of the Earth.
 
 A language model is built to produce the most probable next token. Ask one to name a sorting algorithm and you get quicksort. This game scores the opposite. The outage you were paged for, the RFC you read for fun, the man page you actually finished: that knowledge is how you tell when generated code is wrong, and it's what code drillion rewards. Every drill also shows what a pure autocomplete would have scored, so you can see by how much you beat it.
 
@@ -41,9 +41,9 @@ The format comes from three daily games, combined and moved into software engine
 |---|---|
 | [Krillion](https://krillion.io) | Rarity-weighted answers and the depth metaphor: better answers dive you deeper, and points become meters |
 | [MedRare](https://medrare.io) | The same loop for one profession (medicine), with tiers named after anatomical depth and a reference for every answer |
-| [Kabloom](https://kabloom.io) | No answer can be used twice, and each day is built around a trap: the last question's only answer is the famous one people spent earlier |
+| [Kabloom](https://kabloom.io) | No answer can be used twice, and a final question that calls back to an earlier one |
 
-New here: a drilling rig instead of a dive, with layers of the Earth as the tiers and real kilometers as the depth; the **autocomplete baseline** (a greedy "always say the likeliest answer" player that scores 160 points, 1,456 km, on every drill), use-after-free for reused answers, a root trivia question to finish, and a line of history on every one of the 1,912 answers.
+New here: a drilling rig instead of a dive, with layers of the Earth as the tiers and real kilometers as the depth; the **autocomplete baseline** (a greedy "always say the likeliest answer" player that scores 160 points, 1,456 km, on every drill), use-after-free for reused answers, a root trivia question to finish, and a line of history on every answer.
 
 ## Artwork
 
@@ -56,57 +56,115 @@ All the art is drawn procedurally with Canvas 2D from seeded randomness (`js/art
 
 Layer boundaries in the cross-section are the real seismic depths in km. Thin layers are drawn taller so they stay visible.
 
-## Run it
+## How each day's puzzle is made
 
-No dependencies and no build step are needed to play.
+A puzzle is planned two days ahead, reviewed in a pull request, and published when it's approved. If you say nothing, it approves itself after 24 hours.
 
-```bash
-npm start          # serves the repo at http://localhost:8000
-npm test           # bank integrity, matching, daily generation, scoring
-npm run build      # dist/code-drillion.html, one self-contained file that also works from file://
+```
+00:17 UTC   Daily puzzle workflow plans the puzzle for two days out
+            -> no prompt used within 30 days of that date (published or still in review)
+            -> if fewer than 12 fresh prompts remain, Claude writes new ones first
+            -> opens a pull request that previews all seven questions, sample answers, and the root answer
+hourly      Puzzle review workflow merges any pull request 24 hours old with no feedback
+on merge    Deploy site workflow publishes it to GitHub Pages
 ```
 
-To deploy, serve the repository root from any static host. GitHub Pages works as is (Settings → Pages → deploy from branch, root folder). Set `<meta name="drill:share-url">` in `index.html` to your public URL if you want it appended to shared results.
+**Reviewing.** Each puzzle pull request is assigned to you and asks for your review. Comment with:
 
-Daily drills are generated deterministically from the local calendar date (drill #1 is 22 Nov 2026), so everyone gets the same seven prompts without a server. No prompt repeats within a five-day window. Progress, streaks and stats live in the browser's `localStorage`.
+| Command | Effect |
+|---|---|
+| `/approve` (or approve the pull request) | Publish now |
+| `/hold` (or any other comment, or a review that requests changes) | Stop auto-approval until you decide |
+| `/release` | Resume auto-approval with a fresh 24-hour window |
+| `/reroll` | Replace all six prompts; the window restarts |
+| `/swap 3` | Replace prompt 3 only (1 to 6); the window restarts |
+
+You can also edit `puzzles/YYYY-MM-DD.json` on the branch and then `/approve`. Only the repository owner, members and collaborators can approve, hold or change a puzzle; anyone else's comments are ignored. A puzzle still on hold once its date has passed is closed; players that day got the built-in generator's puzzle instead.
+
+**Why two days ahead.** Players get the puzzle for their own calendar date. Planning at 00:17 UTC two days out means the 24-hour window ends around 00:17 UTC the day before, well before the earliest time zone (UTC+14) reaches the puzzle's date.
+
+**No repeats for a month.** The planner never picks a prompt used within 30 days of the date, counting puzzles already published, puzzles waiting in pull requests, and days the fallback generator served. That needs about 180 prompts in rotation (6 a day for 30 days). Until the bank is that large, the planner reuses the least recently used prompts and lists each repeat under **Warnings** in the pull request, and the daily job asks Claude for new prompts whenever fewer than 12 fresh ones remain.
+
+## Growing the bank
+
+The **Grow the bank** workflow runs every Monday (or on demand from the Actions tab). It uses Claude (`claude-opus-5-5`) to:
+
+1. **Write new prompts**, each with about 120 answers across all six layers, lore for every answer, aliases, common wrong answers and two root questions.
+2. **Add answers to existing prompts**, starting with the ones that have the fewest.
+3. **Fact-check everything a second time.** Each answer is checked against its prompt, and every lore line for accuracy; anything that can't be confirmed is dropped, and wrong lore is corrected. The pull request lists what was dropped.
+4. **Rank rarity by pageviews**, the way MedRare does for medicine: a generated answer's layer is the average of Claude's estimate and how often its Wikipedia article is read in a year. Hand-ranked answers never change.
+5. **Validate** with the same checks as the test suite (no alias that matches two answers, no "nope" entry hiding a real answer, root questions pointing at famous answers, lore under 220 characters). Prompts that fail are reported and not written.
+
+The result opens as a pull request with the same commands and 24-hour window (set `growth.autoApprove` to `false` in `drill.config.json` to require a manual merge). Locally: `npm run grow -- --propose 3 --expand 0 --dry-run`.
+
+## Setting it up
+
+1. **Merge this branch into `main`.** Scheduled workflows only run from the default branch.
+2. **Let Actions open pull requests.** Settings → Actions → General → Workflow permissions: choose *Read and write permissions* and tick *Allow GitHub Actions to create and approve pull requests*.
+3. **Turn on Pages.** Settings → Pages → Source: *GitHub Actions*.
+4. **Add the API key** for bank growth. Settings → Secrets and variables → Actions → New repository secret: `ANTHROPIC_API_KEY`. Without it, puzzles are still planned from the existing bank.
+5. *(Optional)* Add a repository variable `WIKIMEDIA_USER_AGENT` with a contact address, as Wikimedia asks of API clients.
+6. *(Optional)* Branch protection that requires reviews on `main` will block the automatic merge. Leave reviews optional, or let the GitHub Actions bot bypass them.
+
+The first puzzle pull request opens at the next 00:17 UTC; run **Daily puzzle** from the Actions tab to get one sooner. Settings such as the review window, the no-repeat window and the model live in `drill.config.json`.
+
+## Run it locally
+
+```bash
+npm install        # only needed for bank growth (the Anthropic SDK)
+npm start          # http://localhost:8000
+npm test           # game engine, the whole bank, planner, review rules, generator (with a fake Claude)
+npm run build      # dist/code-drillion.html, one self-contained file that also works from file://
+npm run plan -- --dry-run      # preview the next puzzle without writing it
+```
+
+Set `<meta name="drill:share-url">` in `index.html` to your public URL if you want it appended to shared results. Progress, streaks and stats live in the browser's `localStorage`.
 
 ## Project layout
 
 ```
-index.html            page shell (home, play, results views and dialogs)
-styles.css            all styling; light and dark themes
-js/engine.js          pure game logic: normalization, fuzzy matching, burn keys, daily plans, scoring
-js/art.js             procedural artwork: the rig, the robot, layer textures, badges, drilling scenes
-js/app.js             rendering, timer, storage
-js/bank/*.js          the answer bank: 35 prompts in four themed files
-tests/engine.test.js  node:test suite, which also checks the whole bank
-scripts/build.mjs     single-file bundler
-scripts/serve.mjs     tiny static server
+index.html                 page shell (home, play, results views and dialogs)
+styles.css                 all styling; light and dark themes
+js/engine.js               game logic: matching, scoring, puzzle files, the fallback generator
+js/art.js                  procedural artwork: the rig, the robot, layer textures, badges, scenes
+js/app.js                  rendering, timer, storage, loading puzzles
+bank/prompts/*.json        the answer bank, one prompt per file, one answer per line
+puzzles/YYYY-MM-DD.json    approved daily puzzles
+drill.config.json          review window, no-repeat window, generation settings
+scripts/plan-puzzle.mjs    plans a day's puzzle and writes the pull request text
+scripts/review-puzzles.mjs applies review commands and the 24-hour auto-approval
+scripts/grow-bank.mjs      writes, fact-checks and ranks new prompts and answers with Claude
+scripts/lib/               bank files, validation, planner, history, generation, pageviews
+scripts/build.mjs          single-file build, and the GitHub Pages site (--site)
+.github/workflows/         daily puzzle, puzzle review, bank growth, deploy, tests
+tests/                     node:test suites, including a mock GitHub API
 ```
 
-## Adding prompts and answers
+## Editing prompts by hand
 
-Each prompt is a plain object in one of the `js/bank/*.js` files:
+Each prompt is a JSON file in `bank/prompts/`:
 
-```js
+```json
 {
-  id: 'sorting', cat: 'algorithms', d: 1,          // d: difficulty 1-3, easier prompts come first
-  q: 'Name a sorting algorithm.',
-  strip: ['sort', 'algorithm'],                    // words ignored when matching ("merge sort" = "merge")
-  answers: [
-    ans('Quicksort', 0, 'Tony Hoare, 1959, ...', ['quick sort', 'qsort']),
-    ans('Powersort', 5, 'Munro and Wild, 2018. ...'),
+  "id": "sorting",
+  "cat": "algorithms",
+  "d": 1,
+  "q": "Name a sorting algorithm.",
+  "strip": ["sort", "sorting", "algorithm"],
+  "answers": [
+    {"n":"Quicksort","t":0,"l":"Tony Hoare, 1959, devised while he was a visiting student in Moscow.","alias":["quick sort","qsort"]},
+    {"n":"Powersort","t":5,"l":"Munro and Wild, 2018. Its merge policy replaced Timsort's in CPython 3.11."}
   ],
-  nope: { quickselect: 'A close cousin. It finds the k-th element without sorting the rest.' },
-  traps: [{ q: 'Name the sorting algorithm Tony Hoare invented in 1959.', answer: 'Quicksort' }],
+  "nope": {"quickselect": "A close cousin. It finds the k-th element without sorting the rest."},
+  "traps": [{"q": "Name the sorting algorithm Tony Hoare invented in 1959.", "answer": "Quicksort"}]
 }
 ```
 
-- `ans(name, tier, lore, aliases?, key?)`: tier 0 (topsoil, the autocomplete layer) to 5 (inner core). `key` forces two answers in different prompts to count as the same answer for use-after-free (Dijkstra the person and Dijkstra's algorithm share one).
-- `numeric: true` matches the first number typed (ports, status codes, RFCs). `keep: '_'` makes underscores significant (C's `_Bool` is not `bool`).
+- `d` is difficulty from 1 to 3; easier prompts come first in a puzzle. `strip` lists words ignored when matching ("merge sort" = "merge").
+- Each answer has a name `n`, a tier `t` from 0 (topsoil) to 5 (inner core), lore `l` and optional `alias`. Generated answers also carry `src`, `wiki` and `views`. `k` forces answers in different prompts to count as the same for use-after-free.
+- `numeric: true` matches the first number typed (ports, status codes, RFCs). `keep: "_"` makes underscores significant (C's `_Bool` is not `bool`).
 - `nope` gives a reason for a common wrong answer instead of "not in the bank".
-- `traps` become root prompts. Their answer must be a tier 0 or 1 answer of the same prompt.
+- `traps` are root questions. Each answer must be a tier 0 or 1 answer in the same prompt.
+- `"status": "draft"` keeps a prompt out of rotation.
 
-Then run `npm test`. It checks every name and alias against its own answer, and flags aliases that collide, `nope` entries that shadow real answers, missing tiers, over-long lore, and broken traps.
-
-Rarity is editorial: answers are ranked by hand by how unlikely an engineer, or a model, would be to say them first. Suggestions and corrections are welcome as issues.
+Run `npm test` afterwards; it validates every prompt. Rarity blends hand ranking with Wikipedia pageviews. Suggestions and corrections are welcome as issues.

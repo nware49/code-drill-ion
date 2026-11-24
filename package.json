@@ -2,12 +2,18 @@
   "name": "code-drillion",
   "version": "1.0.0",
   "private": true,
-  "description": "A daily rarity-scored trivia drill for software engineers. Drill below the autocomplete.",
+  "description": "A daily trivia drill for software engineers. Rarer answers drill deeper toward the center of the Earth.",
   "type": "module",
   "scripts": {
     "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.js",
     "build": "node scripts/build.mjs",
-    "test": "node --test tests/*.test.js"
+    "build:site": "node scripts/build.mjs --site dist/site",
+    "plan": "node scripts/plan-puzzle.mjs",
+    "grow": "node scripts/grow-bank.mjs"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0"
+  }
 }

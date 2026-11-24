@@ -5,7 +5,9 @@ import {
   materialize, dayNumber, dateForDay, shareText, depthOf, hex, rankFor, MAX_DEPTH, TIERS, PER_DRILL, autocompleteDepth,
   kmFor, fmtKm, layerAt, EARTH_RADIUS_KM, rng,
 } from '../js/engine.js';
-import { BANK } from '../js/bank/index.js';
+import { loadBank, isLive } from '../scripts/lib/bank.mjs';
+
+const BANK = loadBank().filter(isLive);
 
 const PROMPTS = BANK.map(compilePrompt);
 const BY_ID = new Map(PROMPTS.map((p) => [p.id, p]));

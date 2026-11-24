@@ -1,0 +1,53 @@
+{
+  "id": "dead-html",
+  "cat": "web",
+  "d": 3,
+  "q": "Name an obsolete or deprecated HTML element.",
+  "status": "live",
+  "added": "2026-11-22",
+  "answers": [
+    {"n":"<blink>","t":0,"l":"Lou Montulli says it came out of a night at a bar in 1994. Netscape shipped it.","alias":["blink"]},
+    {"n":"<marquee>","t":0,"l":"Microsoft’s answer to blink. Browsers still render it.","alias":["marquee"]},
+    {"n":"<font>","t":1,"l":"Deprecated since HTML 4, in 1997.","alias":["font"]},
+    {"n":"<center>","t":1,"l":"Deprecated since HTML 4, in 1997.","alias":["center"]},
+    {"n":"<frameset>","t":2,"l":"Frames: the reason bookmarks stopped working. Obsolete in HTML5.","alias":["frameset","frame","frames"]},
+    {"n":"<applet>","t":2,"l":"Java applets. Removed in HTML5.","alias":["applet"]},
+    {"n":"<big>","t":3,"l":"Make text bigger. CSS does that now.","alias":["big"]},
+    {"n":"<strike>","t":3,"l":"Use <s> or <del>, depending on what you mean.","alias":["strike"]},
+    {"n":"<tt>","t":3,"l":"Teletype text. Replaced by <code>, <kbd> and <samp>.","alias":["tt"]},
+    {"n":"<acronym>","t":3,"l":"Replaced by <abbr>.","alias":["acronym"]},
+    {"n":"<noframes>","t":4,"l":"What browsers without frame support saw.","alias":["noframes"]},
+    {"n":"<basefont>","t":4,"l":"Set a default font for the whole page.","alias":["basefont"]},
+    {"n":"<dir>","t":4,"l":"A directory list. Use <ul>.","alias":["dir"]},
+    {"n":"<bgsound>","t":4,"l":"Internet Explorer’s background music.","alias":["bgsound"]},
+    {"n":"<nobr>","t":4,"l":"No line breaks. Never standardized, widely supported.","alias":["nobr"]},
+    {"n":"<isindex>","t":5,"l":"A one-line search box from before forms existed.","alias":["isindex"]},
+    {"n":"<keygen>","t":5,"l":"Generated a key pair in the browser for client certificates. Removed around 2017.","alias":["keygen"]},
+    {"n":"<listing>","t":5,"l":"Preformatted text from HTML’s earliest days.","alias":["listing"]},
+    {"n":"<xmp>","t":5,"l":"Showed raw markup as text. Parsers still treat it specially.","alias":["xmp"]},
+    {"n":"<plaintext>","t":5,"l":"Everything after it renders as text. No end tag can stop it.","alias":["plaintext"]},
+    {"n":"<nextid>","t":5,"l":"Used by Tim Berners-Lee’s NeXT editor to generate anchor names.","alias":["nextid"]},
+    {"n":"<menuitem>","t":5,"l":"Context menus that only Firefox ever shipped.","alias":["menuitem"]},
+    {"n":"<multicol>","t":5,"l":"Netscape’s multi-column layout.","alias":["multicol"]},
+    {"n":"<spacer>","t":5,"l":"Netscape’s blank space. The single-pixel GIF won instead.","alias":["spacer"]},
+    {"n":"<layer>","t":5,"l":"Netscape 4’s positioned layers.","alias":["layer","ilayer"]},
+    {"n":"<noembed>","t":5,"l":"Fallback content for <embed>.","alias":["noembed"]},
+    {"n":"<image>","t":5,"l":"The parser silently rewrites it to <img>.","alias":["image"]},
+    {"n":"<rb>","t":5,"l":"Ruby base text. Absorbed into <ruby>.","alias":["rb"]},
+    {"n":"<rtc>","t":5,"l":"Ruby text container. Dropped from the living standard.","alias":["rtc"]}
+  ],
+  "nope": {
+    "u": "<u> was deprecated, then brought back in HTML5 with a new meaning.",
+    "b": "Still valid, with a new meaning.",
+    "i": "Still valid, with a new meaning.",
+    "s": "Still valid. It means \"no longer accurate.\"",
+    "div": "Alive and everywhere.",
+    "table": "Still valid. Just not for layout.",
+    "iframe": "Still very much alive.",
+    "embed": "Still valid."
+  },
+  "traps": [
+    {"q":"Name the element Lou Montulli says was born of a night at a bar in 1994.","answer":"<blink>"},
+    {"q":"Name the scrolling-text element Microsoft added to Internet Explorer.","answer":"<marquee>"}
+  ]
+}

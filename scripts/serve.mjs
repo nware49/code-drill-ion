@@ -1,8 +1,10 @@
 // Minimal static server for local play: `npm start`, then open http://localhost:8000
+// Serves the repo as-is, plus bank/bank.json assembled from bank/prompts/*.json.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadBank, bankForClient } from './lib/bank.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const port = Number(process.env.PORT) || 8000;
@@ -10,6 +12,12 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/ja
 
 createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  if (path === '/bank/bank.json') {
+    // Built on the fly from bank/prompts, so edits show up on reload.
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(bankForClient(loadBank())));
+    return;
+  }
   const file = normalize(join(root, path.endsWith('/') ? `${path}index.html` : path));
   if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
   try {

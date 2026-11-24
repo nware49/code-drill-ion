@@ -1,0 +1,41 @@
+{
+  "id": "eponym-langs",
+  "cat": "languages",
+  "d": 2,
+  "q": "Name a programming language named after a real person.",
+  "status": "live",
+  "added": "2026-11-22",
+  "answers": [
+    {"n":"Ada","t":0,"l":"Named for Ada Lovelace. Its military standard number, MIL-STD-1815, is her birth year."},
+    {"n":"Haskell","t":0,"l":"Named for logician Haskell Curry, who also lent his name to currying."},
+    {"n":"Pascal","t":1,"l":"Named for Blaise Pascal, who built a mechanical calculator as a teenager."},
+    {"n":"Erlang","t":2,"l":"Named for A. K. Erlang, the queueing-theory pioneer. Also, conveniently, ERicsson LANGuage."},
+    {"n":"Eiffel","t":2,"l":"Bertrand Meyer named it for Gustave Eiffel, whose tower was finished on time and on budget."},
+    {"n":"Wolfram Language","t":3,"l":"Stephen Wolfram named it after himself. The language of Mathematica.","alias":["wolfram","mathematica"]},
+    {"n":"Turing","t":3,"l":"Holt and Cordy, University of Toronto, 1982. A teaching language named for Alan Turing."},
+    {"n":"Coq","t":3,"l":"Named partly for Thierry Coquand and his Calculus of Constructions. Renamed Rocq in 2025.","alias":["rocq"]},
+    {"n":"Gödel","t":4,"l":"A 1990s logic programming language from Hill and Lloyd, named for Kurt Gödel.","alias":["godel","goedel"]},
+    {"n":"Curry","t":4,"l":"A functional logic language. Haskell Curry, again."},
+    {"n":"Church","t":4,"l":"A probabilistic programming language named for Alonzo Church, Turing’s doctoral advisor."},
+    {"n":"Grace","t":5,"l":"An educational object-oriented language named for Grace Hopper."},
+    {"n":"Euler","t":5,"l":"Wirth and Weber, 1965. A generalization of ALGOL named for Leonhard Euler."},
+    {"n":"Babbage","t":5,"l":"A high-level assembler for GEC 4000 minicomputers, named for Charles Babbage."}
+  ],
+  "nope": {
+    "python": "Named for Monty Python’s Flying Circus. A troupe, not a person.",
+    "julia": "Its creators say there is no particular Julia.",
+    "ruby": "Named after a birthstone.",
+    "rust": "Named, at least partly, after a fungus.",
+    "java": "An island, and the coffee.",
+    "kotlin": "An island near St. Petersburg.",
+    "lua": "Portuguese for \"moon.\"",
+    "agda": "Named after a hen in a Swedish song. Close?",
+    "lovelace": "Right person. The language is called Ada.",
+    "hopper": "Right person. Try the language named Grace.",
+    "scala": "Short for \"scalable language.\""
+  },
+  "traps": [
+    {"q":"Name the language whose military standard, MIL-STD-1815, honors its namesake’s birth year.","answer":"Ada"},
+    {"q":"Name the language named for the logician who also gave his name to currying.","answer":"Haskell"}
+  ]
+}

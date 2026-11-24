@@ -2,9 +2,8 @@
 import {
   TIERS, ROOT, MAX_DEPTH, compilePrompt, judge, pointsFor, dailyPlan, practicePlan, materialize,
   dayNumber, dateForDay, hex, rankFor, depthOf, shareText, rng, shuffle, autocompleteDepth,
-  kmFor, fmtKm, layerAt,
+  kmFor, fmtKm, layerAt, isoForDay, fromPuzzle,
 } from './engine.js';
-import { BANK } from './bank/index.js';
 import { DrillScene, badgeURL } from './art.js';
 
 const SUGGEST_URL = 'https://github.com/nware49/code-drill-ion/issues/new';
@@ -13,9 +12,46 @@ const SECONDS = 30;
 const SECONDS_EXTENDED = 45;
 const SHARE_URL = document.querySelector('meta[name="drill:share-url"]')?.content?.trim() || '';
 
-const PROMPTS = BANK.map(compilePrompt);
-const PROMPT_BY_ID = new Map(PROMPTS.map((p) => [p.id, p]));
-const BANK_ANSWERS = PROMPTS.reduce((n, p) => n + p.answers.length, 0);
+// Daily drills come from reviewed puzzle files (puzzles/YYYY-MM-DD.json). The full bank is only
+// needed for practice drills and for days without a puzzle file. The single-file build embeds both.
+const EMBED = window.DRILL_DATA ?? null;
+let PROMPTS = [];
+let PROMPT_BY_ID = new Map();
+let bankLoading = null;
+const puzzleCache = new Map();
+
+function loadBank() {
+  bankLoading ??= (async () => {
+    const raw = EMBED?.bank ?? (await (await fetch('bank/bank.json', { cache: 'no-cache' })).json());
+    PROMPTS = raw.map(compilePrompt);
+    PROMPT_BY_ID = new Map(PROMPTS.map((p) => [p.id, p]));
+  })().catch((err) => { bankLoading = null; throw err; });
+  return bankLoading;
+}
+
+/** The published puzzle for a drill number, compiled, or null when there is no file for that date. */
+async function loadPuzzle(day) {
+  const iso = isoForDay(day);
+  if (!puzzleCache.has(iso)) {
+    let puzzle = EMBED ? EMBED.puzzles?.[iso] ?? null : null;
+    if (!EMBED) {
+      try {
+        const res = await fetch(`puzzles/${iso}.json`, { cache: 'no-cache' });
+        if (res.ok) puzzle = await res.json();
+      } catch { /* offline or not deployed yet: fall back to the generator */ }
+    }
+    puzzleCache.set(iso, puzzle ? fromPuzzle(puzzle) : null);
+  }
+  return puzzleCache.get(iso);
+}
+
+/** Plan for a daily or archive drill: the puzzle file when there is one, else the generator. */
+async function planForDay(day) {
+  const puzzle = await loadPuzzle(day);
+  if (puzzle) return { plan: puzzle.plan, source: 'puzzle' };
+  await loadBank();
+  return { plan: dailyPlan(PROMPTS, day), source: 'generated' };
+}
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -64,15 +100,17 @@ const secondsPerPrompt = () => (store.settings.extended ? SECONDS_EXTENDED : SEC
 const spentMap = () => new Map(game.spent);
 const isLast = () => game.idx >= items.length - 1;
 
-function newRecord(mode, day, plan, seed) {
-  return { mode, day, seed, plan, idx: 0, results: [], spent: [], deadline: null, seconds: secondsPerPrompt(), phase: 'answer', startedAt: Date.now() };
+function newRecord(mode, day, plan, seed, source = 'generated') {
+  return { mode, day, seed, plan, source, idx: 0, results: [], spent: [], deadline: null, seconds: secondsPerPrompt(), phase: 'answer', startedAt: Date.now() };
 }
 
-function attach(record) {
+async function attach(record) {
   try {
-    items = materialize(record.plan, PROMPT_BY_ID);
+    const puzzle = record.source === 'puzzle' ? await loadPuzzle(record.day) : null;
+    if (!puzzle) await loadBank();
+    items = materialize(record.plan, puzzle ? puzzle.byId : PROMPT_BY_ID);
   } catch {
-    return false; // the bank changed under a saved drill
+    return false; // offline, or the bank changed under a saved drill
   }
   game = record;
   log = [];
@@ -80,35 +118,51 @@ function attach(record) {
   return true;
 }
 
-function startDaily() {
+/** Run a start action with its button disabled, and report a load failure instead of hanging. */
+async function busy(btn, fn) {
+  if (btn) btn.disabled = true;
+  try {
+    await fn();
+  } catch {
+    $('home-status').textContent = 'Couldn’t load the drill. Check your connection and try again.';
+    goHome();
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function startDaily() {
   const day = dayNumber();
   let rec = store.days[day];
-  if (!rec || !attach(rec)) {
-    rec = newRecord('daily', day, dailyPlan(PROMPTS, day));
+  if (!rec || !(await attach(rec))) {
+    const { plan, source } = await planForDay(day);
+    rec = newRecord('daily', day, plan, undefined, source);
     store.days[day] = rec;
-    attach(rec);
+    if (!(await attach(rec))) throw new Error('drill unavailable');
     persist();
   }
   enter();
 }
 
-function startArchive(day) {
-  if (store.days[day]?.phase === 'done') { attach(store.days[day]); enter(); return; }
+async function startArchive(day) {
+  if (store.days[day]?.phase === 'done' && (await attach(store.days[day]))) { enter(); return; }
   let rec = store.archive[day];
-  if (!rec || !attach(rec)) {
-    rec = newRecord('archive', day, dailyPlan(PROMPTS, day));
+  if (!rec || !(await attach(rec))) {
+    const { plan, source } = await planForDay(day);
+    rec = newRecord('archive', day, plan, undefined, source);
     store.archive[day] = rec;
-    attach(rec);
+    if (!(await attach(rec))) throw new Error('drill unavailable');
     persist();
   }
   enter();
 }
 
-function startPractice() {
+async function startPractice() {
+  await loadBank();
   const seed = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
   const rec = newRecord('practice', null, practicePlan(PROMPTS, seed), seed);
   store.practice = rec;
-  attach(rec);
+  await attach(rec);
   persist();
   enter();
 }
@@ -356,7 +410,7 @@ function cutsHtml(prompt, exceptKey) {
   const cuts = deeperCuts(prompt, exceptKey);
   if (!cuts.length) return '';
   return `<div class="cuts">
-    <p class="label">Deeper answers · ${prompt.answers.length} in the bank</p>
+    <p class="label">Deeper answers</p>
     <ul class="cut-list">${cuts.map((a) => `<li class="cut"><span class="tier ${tierClass(a.t)}">${esc(tierName(a.t))}</span><span class="cut-name">${esc(a.n)}</span><span class="cut-lore">${esc(a.l)}</span></li>`).join('')}</ul>
   </div>`;
 }
@@ -664,9 +718,9 @@ function cycleTheme() {
 
 function wire() {
   $('brand').addEventListener('click', goHome);
-  $('start-daily').addEventListener('click', startDaily);
-  $('start-practice').addEventListener('click', startPractice);
-  $('res-practice').addEventListener('click', startPractice);
+  $('start-daily').addEventListener('click', (e) => busy(e.currentTarget, startDaily));
+  $('start-practice').addEventListener('click', (e) => busy(e.currentTarget, startPractice));
+  $('res-practice').addEventListener('click', (e) => busy(e.currentTarget, startPractice));
   $('res-home').addEventListener('click', goHome);
   $('answer-form').addEventListener('submit', onSubmit);
   $('pass-btn').addEventListener('click', () => resolvePrompt('pass'));
@@ -705,7 +759,7 @@ function wire() {
     const btn = e.target.closest('[data-archive]');
     if (!btn) return;
     closeDialog($('dlg-stats'));
-    startArchive(Number(btn.dataset.archive));
+    busy(null, () => startArchive(Number(btn.dataset.archive)));
   });
 
   window.setInterval(() => {
@@ -724,18 +778,17 @@ function paintArt() {
   window.setTimeout(() => scenes.home.setDepth(6200, { duration: 3200 }), 400);
 }
 
-function boot(data = {}) {
+async function boot(data = {}) {
   store = readStore(data.store);
   applyTheme();
   wire();
-  $('bank-note').textContent = `Answers are checked against a hand-built bank of ${BANK_ANSWERS.toLocaleString()} answers across ${PROMPTS.length} prompts, and every answer carries a line of history. Rarity is editorial: ranked by hand by how unlikely an engineer, or a model, would be to say it first.`;
   renderHome();
   paintArt();
 
   // Pick up a drill that was interrupted mid-prompt.
   const today = store.days[dayNumber()];
   const resumable = [today, store.practice].find((g) => g && g.phase !== 'done' && (g.mode !== 'practice' || data.view === 'play'));
-  if (resumable && attach(resumable)) {
+  if (resumable && (await attach(resumable))) {
     enter();
   } else {
     showView('home');

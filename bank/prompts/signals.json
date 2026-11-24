@@ -1,0 +1,53 @@
+{
+  "id": "signals",
+  "cat": "unix",
+  "d": 2,
+  "q": "Name a POSIX or Linux signal.",
+  "status": "live",
+  "added": "2026-11-22",
+  "answers": [
+    {"n":"SIGKILL","t":0,"l":"Signal 9. Cannot be caught, blocked or ignored. The kernel just ends you.","alias":["KILL","9","kill -9","sig KILL"]},
+    {"n":"SIGTERM","t":0,"l":"Signal 15, kill's default. A polite request to clean up and exit.","alias":["TERM","15","kill -15","sig TERM"]},
+    {"n":"SIGINT","t":1,"l":"Signal 2. What Ctrl-C sends.","alias":["INT","2","kill -2","sig INT"]},
+    {"n":"SIGHUP","t":1,"l":"Signal 1. Born when modems hung up. Daemons reuse it to mean \"reload your config.\"","alias":["HUP","1","kill -1","sig HUP"]},
+    {"n":"SIGSEGV","t":1,"l":"Signal 11. Segmentation fault: you touched memory you do not own.","alias":["SEGV","11","kill -11","sig SEGV"]},
+    {"n":"SIGSTOP","t":2,"l":"Like SIGKILL, it cannot be caught. Pauses the process until SIGCONT.","alias":["STOP","sig STOP"]},
+    {"n":"SIGCHLD","t":2,"l":"Sent when a child exits. Ignore it and you collect zombies.","alias":["CHLD","sig CHLD"]},
+    {"n":"SIGPIPE","t":2,"l":"Writing to a pipe with no reader. Why `yes | head -1` exits quietly.","alias":["PIPE","13","kill -13","sig PIPE"]},
+    {"n":"SIGUSR1","t":2,"l":"Yours to define. dd prints progress on it; nginx reopens log files.","alias":["USR1","sig USR1"]},
+    {"n":"SIGUSR2","t":2,"l":"Also yours to define. Many servers use it for zero-downtime binary upgrades.","alias":["USR2","sig USR2"]},
+    {"n":"SIGABRT","t":2,"l":"Signal 6. What abort() and failed assertions raise.","alias":["ABRT","6","kill -6","sig ABRT"]},
+    {"n":"SIGALRM","t":3,"l":"Signal 14. Delivered when an alarm() timer expires.","alias":["ALRM","14","kill -14","sig ALRM"]},
+    {"n":"SIGQUIT","t":3,"l":"Ctrl-\\. Quits with a core dump. The JVM prints a thread dump instead.","alias":["QUIT","3","kill -3","sig QUIT"]},
+    {"n":"SIGTSTP","t":3,"l":"Ctrl-Z. The catchable cousin of SIGSTOP.","alias":["TSTP","sig TSTP"]},
+    {"n":"SIGCONT","t":3,"l":"Resumes a stopped process. fg and bg send it.","alias":["CONT","sig CONT"]},
+    {"n":"SIGBUS","t":3,"l":"Bus error: misaligned access, or touching an mmap’d file that shrank.","alias":["BUS","sig BUS"]},
+    {"n":"SIGFPE","t":3,"l":"Floating-point exception, also raised for integer division by zero despite the name.","alias":["FPE","sig FPE"]},
+    {"n":"SIGILL","t":3,"l":"Illegal instruction. Often an AVX binary on a CPU without AVX.","alias":["ILL","sig ILL"]},
+    {"n":"SIGTRAP","t":4,"l":"Debugger breakpoints. On x86, the int3 instruction raises it.","alias":["TRAP","sig TRAP"]},
+    {"n":"SIGWINCH","t":4,"l":"Window changed: your terminal was resized. How vim and less redraw.","alias":["WINCH","sig WINCH"]},
+    {"n":"SIGSYS","t":4,"l":"Bad system call. seccomp filters can raise it.","alias":["SYS","sig SYS"]},
+    {"n":"SIGTTIN","t":5,"l":"A background job tried to read from the terminal.","alias":["TTIN","sig TTIN"]},
+    {"n":"SIGTTOU","t":5,"l":"A background job tried to write to the terminal (with tostop set).","alias":["TTOU","sig TTOU"]},
+    {"n":"SIGURG","t":5,"l":"Urgent socket data. Go 1.14 borrowed it for asynchronous goroutine preemption, since almost nobody uses it.","alias":["URG","sig URG"]},
+    {"n":"SIGXCPU","t":5,"l":"CPU time limit exceeded (RLIMIT_CPU).","alias":["XCPU","sig XCPU"]},
+    {"n":"SIGXFSZ","t":5,"l":"File size limit exceeded (RLIMIT_FSIZE).","alias":["XFSZ","sig XFSZ"]},
+    {"n":"SIGPROF","t":5,"l":"Profiling timer. Sampling profilers like pprof tick on it.","alias":["PROF","sig PROF"]},
+    {"n":"SIGVTALRM","t":5,"l":"Virtual timer: counts only time spent in user mode.","alias":["VTALRM","sig VTALRM"]},
+    {"n":"SIGIO","t":5,"l":"Asynchronous I/O is possible. Also known as SIGPOLL.","alias":["IO","sig IO"]},
+    {"n":"SIGPOLL","t":5,"l":"System V name for pollable events. Linux aliases it to SIGIO.","alias":["POLL","sig POLL"]},
+    {"n":"SIGPWR","t":5,"l":"Power failure. A UPS daemon sends it to init.","alias":["PWR","sig PWR"]},
+    {"n":"SIGSTKFLT","t":5,"l":"Stack fault on a coprocessor. Defined on Linux, essentially never sent.","alias":["STKFLT","sig STKFLT"]},
+    {"n":"SIGINFO","t":5,"l":"BSD and macOS: Ctrl-T asks a process for a status report. Linux never adopted it.","alias":["INFO","sig INFO"]},
+    {"n":"SIGIOT","t":5,"l":"An old synonym for SIGABRT, named for the PDP-11's IOT instruction.","alias":["IOT","sig IOT"]},
+    {"n":"SIGRTMIN","t":5,"l":"The first real-time signal. Queued, ordered, and able to carry data.","alias":["RTMIN","sig RTMIN"]}
+  ],
+  "nope": {
+    "sigsegfault": "Close. It is SIGSEGV.",
+    "eof": "Ctrl-D is not a signal. The terminal just ends the input."
+  },
+  "traps": [
+    {"q":"Name the signal that can never be caught, blocked or ignored, and is not SIGSTOP.","answer":"SIGKILL"},
+    {"q":"Name the signal that kill sends when you give it no signal at all.","answer":"SIGTERM"}
+  ]
+}

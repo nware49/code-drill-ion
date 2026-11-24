@@ -1,0 +1,53 @@
+{
+  "id": "to-js",
+  "cat": "web",
+  "d": 2,
+  "q": "Name a language that compiles to JavaScript.",
+  "status": "live",
+  "added": "2026-11-22",
+  "answers": [
+    {"n":"TypeScript","t":0,"l":"Anders Hejlsberg, Microsoft, 2012. Its compiler is being ported to Go for speed.","alias":["ts"]},
+    {"n":"CoffeeScript","t":1,"l":"Jeremy Ashkenas, 2009. ES6 arrow functions and classes owe it a lot.","alias":["coffee"]},
+    {"n":"Elm","t":2,"l":"Evan Czaplicki, 2012. No runtime exceptions in practice, and compiler errors that set a new bar."},
+    {"n":"ClojureScript","t":2,"l":"Clojure on JavaScript, optimized by the Google Closure Compiler.","alias":["cljs"]},
+    {"n":"Dart","t":2,"l":"Google, 2011. Once meant to replace JavaScript in Chrome. Now it powers Flutter."},
+    {"n":"JSX","t":2,"l":"XML-like syntax that compiles to function calls."},
+    {"n":"ReasonML","t":3,"l":"OCaml with JavaScript-friendly syntax, from Jordan Walke, who created React.","alias":["reason"]},
+    {"n":"ReScript","t":3,"l":"Grew out of BuckleScript and Reason. Typed, with very fast builds."},
+    {"n":"PureScript","t":3,"l":"Haskell-like, strict, and compiles to readable JavaScript."},
+    {"n":"Haxe","t":3,"l":"One language, many targets: JavaScript, C++, C#, Python, Lua and more."},
+    {"n":"Kotlin/JS","t":3,"l":"Kotlin’s JavaScript target.","alias":["kotlin","kotlinjs"]},
+    {"n":"Scala.js","t":3,"l":"Scala in the browser.","alias":["scala","scalajs"]},
+    {"n":"Gleam","t":3,"l":"Type-safe and friendly, targeting both the Erlang VM and JavaScript."},
+    {"n":"Nim","t":3,"l":"Compiles to C, C++ or JavaScript."},
+    {"n":"Emscripten","t":3,"l":"Compiled C and C++ to asm.js before WebAssembly existed.","alias":["asmjs","asm.js"]},
+    {"n":"Flow","t":3,"l":"Facebook’s type checker. Annotations are stripped to plain JavaScript."},
+    {"n":"GWT","t":3,"l":"Google Web Toolkit, 2006. Java in, JavaScript out.","alias":["google web toolkit","java"]},
+    {"n":"LiveScript","t":4,"l":"A CoffeeScript descendant. Also JavaScript’s own name for a few months in 1995."},
+    {"n":"Fable","t":4,"l":"F# to JavaScript.","alias":["fsharp","f#"]},
+    {"n":"Opal","t":4,"l":"Ruby to JavaScript."},
+    {"n":"Brython","t":4,"l":"Python 3 running in the browser."},
+    {"n":"Transcrypt","t":4,"l":"Python to readable JavaScript, ahead of time."},
+    {"n":"Imba","t":4,"l":"A full-stack language with its own memoized DOM."},
+    {"n":"Civet","t":4,"l":"A modern CoffeeScript-flavored syntax for TypeScript."},
+    {"n":"BuckleScript","t":4,"l":"OCaml to readable JavaScript. It became ReScript."},
+    {"n":"Js_of_ocaml","t":4,"l":"Compiles OCaml bytecode to JavaScript.","alias":["jsofocaml"]},
+    {"n":"Objective-J","t":5,"l":"Cappuccino’s Objective-C-style superset of JavaScript. It powered 280 Slides.","alias":["objectivej"]},
+    {"n":"Iced CoffeeScript","t":5,"l":"CoffeeScript with await and defer, years before JavaScript had async."},
+    {"n":"Parenscript","t":5,"l":"Common Lisp to JavaScript."},
+    {"n":"Roy","t":5,"l":"An early ML-flavored language for JavaScript."},
+    {"n":"Idris","t":5,"l":"Dependently typed, with a JavaScript backend."},
+    {"n":"Mint","t":5,"l":"A language built just for single-page apps."},
+    {"n":"Ur/Web","t":5,"l":"Type-safe web programming in one language.","alias":["urweb"]}
+  ],
+  "nope": {
+    "babel": "A compiler. What is it compiling?",
+    "javascript": "That’s the destination.",
+    "webassembly": "A different compile target.",
+    "wasm": "A different compile target."
+  },
+  "traps": [
+    {"q":"Name the language Anders Hejlsberg unveiled at Microsoft in 2012.","answer":"TypeScript"},
+    {"q":"Name the 2009 language whose arrow functions and classes inspired ES6.","answer":"CoffeeScript"}
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "vcs",
+  "cat": "tools",
+  "d": 2,
+  "q": "Name a version control system.",
+  "status": "live",
+  "added": "2026-11-22",
+  "answers": [
+    {"n":"Git","t":0,"l":"Linus Torvalds wrote the first version in about ten days in April 2005."},
+    {"n":"Subversion","t":1,"l":"SVN, 2000. \"CVS done right,\" as its authors put it.","alias":["svn"]},
+    {"n":"Mercurial","t":1,"l":"Started the same month as Git, after the same BitKeeper license change.","alias":["hg"]},
+    {"n":"CVS","t":2,"l":"Concurrent Versions System, 1986. Commits were per file, not per change.","alias":["concurrent versions system"]},
+    {"n":"Perforce","t":2,"l":"Helix Core. Still big in game studios, where binary assets are huge.","alias":["helix core","p4"]},
+    {"n":"Team Foundation Version Control","t":3,"l":"TFVC: Microsoft’s centralized system in TFS and Azure DevOps.","alias":["tfvc","tfs","team foundation server"]},
+    {"n":"ClearCase","t":3,"l":"IBM Rational. Exposed versions through a virtual filesystem."},
+    {"n":"Visual SourceSafe","t":3,"l":"Microsoft, 1990s. Its users called it Visual SourceUnsafe.","alias":["sourcesafe","vss"]},
+    {"n":"BitKeeper","t":3,"l":"The kernel used it until 2005. When its free license was revoked, Git and Mercurial were born."},
+    {"n":"RCS","t":3,"l":"Revision Control System, Walter Tichy, 1982. One file at a time.","alias":["revision control system"]},
+    {"n":"Jujutsu","t":3,"l":"jj. A Git-compatible VCS where the working copy is itself a commit.","alias":["jj"]},
+    {"n":"Sapling","t":3,"l":"Meta’s source control client, built for huge monorepos."},
+    {"n":"SCCS","t":4,"l":"Source Code Control System, Marc Rochkind, Bell Labs, 1972. Usually called the first VCS.","alias":["source code control system"]},
+    {"n":"Darcs","t":4,"l":"Built on a \"theory of patches.\" Changes commute."},
+    {"n":"Fossil","t":4,"l":"D. Richard Hipp’s VCS for SQLite. The repository is a SQLite database, with a wiki and bug tracker inside."},
+    {"n":"Bazaar","t":4,"l":"Canonical’s distributed VCS, behind Launchpad.","alias":["bzr"]},
+    {"n":"Pijul","t":4,"l":"Patch-based like Darcs, with a sounder mathematical model."},
+    {"n":"Plastic SCM","t":4,"l":"Branch-heavy, built for games. Now Unity Version Control.","alias":["plastic","unity version control"]},
+    {"n":"Monotone","t":5,"l":"Content-addressed with SHA-1 hashes. Linus took ideas from it."},
+    {"n":"GNU Arch","t":5,"l":"tla. An early distributed VCS with famously odd branch names.","alias":["arch","tla"]},
+    {"n":"Piper","t":5,"l":"Google’s internal monorepo system, serving one giant repository to tens of thousands of engineers."},
+    {"n":"PVCS","t":5,"l":"Polytron Version Control System, 1985."},
+    {"n":"StarTeam","t":5,"l":"Borland’s enterprise VCS."},
+    {"n":"AccuRev","t":5,"l":"Stream-based, built around how teams promote code."},
+    {"n":"Vesta","t":5,"l":"A DEC research system that combined versioning and builds."},
+    {"n":"Code Co-op","t":5,"l":"Peer-to-peer VCS that synchronized over email."},
+    {"n":"Dimensions CM","t":5,"l":"Serena’s enterprise change management.","alias":["dimensions"]},
+    {"n":"Rational Team Concert","t":5,"l":"IBM’s Jazz-based successor to ClearCase.","alias":["rtc"]}
+  ],
+  "nope": {
+    "github": "A host. Git is the VCS.",
+    "gitlab": "A host. Git is the VCS.",
+    "bitbucket": "A host, though it did start out Mercurial-only.",
+    "dropbox": "We have all done it. It does not count.",
+    "email": "Linux kernel maintainers might argue. Still no.",
+    "finalv2": "A naming convention, not a version control system."
+  },
+  "traps": [
+    {"q":"Name the version control system Linus Torvalds wrote in about ten days in April 2005.","answer":"Git"},
+    {"q":"Name the VCS that described itself as \"CVS done right.\"","answer":"Subversion"}
+  ]
+}

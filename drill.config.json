@@ -1,0 +1,17 @@
+{
+  "lookaheadDays": 2,
+  "approvalHours": 24,
+  "noRepeatDays": 30,
+  "promptsPerDay": 6,
+  "minFreshPrompts": 12,
+  "newPromptsWhenShort": 6,
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "growth": {
+    "proposePrompts": 8,
+    "expandPrompts": 6,
+    "answersPerNewPrompt": 120,
+    "answersPerExpansion": 60,
+    "autoApprove": true
+  }
+}

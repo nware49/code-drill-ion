@@ -1,0 +1,72 @@
+name: Daily puzzle
+
+# Plans the puzzle two days out and opens a pull request for review.
+# The puzzle-review workflow merges it after 24 hours unless someone leaves feedback.
+on:
+  schedule:
+    - cron: '17 0 * * *' # 00:17 UTC, so even UTC+14 has a reviewed puzzle well before its day starts
+  workflow_dispatch:
+    inputs:
+      date:
+        description: Puzzle date (YYYY-MM-DD). Leave empty for two days from today (UTC).
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: daily-puzzle
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fetch puzzles waiting for review
+        run: git fetch origin '+refs/heads/puzzle/*:refs/remotes/origin/puzzle/*' || true
+
+      - name: Plan the puzzle
+        id: plan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WIKIMEDIA_USER_AGENT: ${{ vars.WIKIMEDIA_USER_AGENT }}
+          DATE_INPUT: ${{ inputs.date }}
+        run: node scripts/plan-puzzle.mjs ${DATE_INPUT:+--date "$DATE_INPUT"} --generate --skip-existing --body "$RUNNER_TEMP/pr.md"
+
+      - name: Test
+        if: steps.plan.outputs.skipped != 'true'
+        run: npm test
+
+      - name: Open the pull request
+        if: steps.plan.outputs.skipped != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATE: ${{ steps.plan.outputs.date }}
+          TITLE: ${{ steps.plan.outputs.title }}
+          OWNER: ${{ github.repository_owner }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "puzzle/$DATE"
+          git add puzzles bank
+          git commit -m "$TITLE"
+          git push origin "puzzle/$DATE"
+          gh label create drill-puzzle --color 5319e7 --description "Daily Code Drill puzzle" 2>/dev/null || true
+          gh label create auto-approve --color 0e8a16 --description "Merges automatically after the review window" 2>/dev/null || true
+          gh label create hold --color d93f0b --description "Auto-approval paused" 2>/dev/null || true
+          gh pr create --base "$BASE" --head "puzzle/$DATE" --title "$TITLE" --body-file "$RUNNER_TEMP/pr.md" --label drill-puzzle --label auto-approve
+          gh pr edit "puzzle/$DATE" --add-assignee "$OWNER" || true
+          gh pr edit "puzzle/$DATE" --add-reviewer "$OWNER" || true

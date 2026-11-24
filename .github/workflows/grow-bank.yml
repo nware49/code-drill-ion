@@ -1,0 +1,84 @@
+name: Grow the bank
+
+# Weekly: Claude writes new prompts and more answers for existing ones, fact-checks them,
+# and tiers rarity by Wikipedia pageviews. Opens a pull request with the same review window.
+on:
+  schedule:
+    - cron: '41 3 * * 1' # Mondays, 03:41 UTC
+  workflow_dispatch:
+    inputs:
+      propose:
+        description: New prompts to write
+        default: '8'
+      expand:
+        description: Existing prompts to add answers to
+        default: '6'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: grow-bank
+  cancel-in-progress: false
+
+jobs:
+  grow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check for an API key
+        id: key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::notice::Add an ANTHROPIC_API_KEY repository secret to grow the bank."
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate and fact-check
+        id: grow
+        if: steps.key.outputs.missing != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WIKIMEDIA_USER_AGENT: ${{ vars.WIKIMEDIA_USER_AGENT }}
+          PROPOSE: ${{ inputs.propose }}
+          EXPAND: ${{ inputs.expand }}
+        run: node scripts/grow-bank.mjs ${PROPOSE:+--propose "$PROPOSE"} ${EXPAND:+--expand "$EXPAND"} --body "$RUNNER_TEMP/pr.md"
+
+      - name: Test
+        if: steps.grow.outputs.changed == 'true'
+        run: npm test
+
+      - name: Open the pull request
+        if: steps.grow.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          BASE: ${{ github.event.repository.default_branch }}
+          AUTO: ${{ steps.grow.outputs.auto_approve }}
+        run: |
+          BRANCH="bank/$(date -u +%Y-%m-%d-%H%M)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add bank
+          git commit -m "Grow the bank"
+          git push origin "$BRANCH"
+          gh label create drill-bank --color 1d76db --description "Code Drill answer bank growth" 2>/dev/null || true
+          gh label create auto-approve --color 0e8a16 --description "Merges automatically after the review window" 2>/dev/null || true
+          gh label create hold --color d93f0b --description "Auto-approval paused" 2>/dev/null || true
+          LABELS="--label drill-bank"
+          if [ "$AUTO" = true ]; then LABELS="$LABELS --label auto-approve"; fi
+          gh pr create --base "$BASE" --head "$BRANCH" --title "Grow the bank ($(date -u +%Y-%m-%d))" --body-file "$RUNNER_TEMP/pr.md" $LABELS
+          gh pr edit "$BRANCH" --add-assignee "$OWNER" || true
+          gh pr edit "$BRANCH" --add-reviewer "$OWNER" || true

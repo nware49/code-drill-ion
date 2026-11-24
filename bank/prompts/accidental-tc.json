@@ -1,0 +1,48 @@
+{
+  "id": "accidental-tc",
+  "cat": "theory",
+  "d": 3,
+  "q": "Name something that turned out to be Turing complete.",
+  "hint": "Bonus points if nobody meant it to be.",
+  "status": "live",
+  "added": "2026-11-22",
+  "answers": [
+    {"n":"Conway's Game of Life","t":0,"l":"John Conway, 1970. People have built Life inside Life.","alias":["game of life","life","conway"]},
+    {"n":"Minecraft","t":0,"l":"Redstone. Players have built working CPUs, slowly.","alias":["redstone"]},
+    {"n":"C++ templates","t":1,"l":"Discovered, not designed. Erwin Unruh’s 1994 program printed prime numbers as compiler errors.","alias":["templates","template metaprogramming"]},
+    {"n":"Excel","t":1,"l":"LAMBDA, added in 2021, made plain formulas Turing complete. Microsoft said so itself.","alias":["excel formulas","microsoft excel"]},
+    {"n":"CSS","t":1,"l":"HTML and CSS can run Rule 110, if a human keeps clicking.","alias":["html css","css3","html5 css3"]},
+    {"n":"TypeScript types","t":1,"l":"In 2025, Dimitri Mitropoulos ran DOOM using only TypeScript’s type system.","alias":["typescript","typescript type system","ts types"]},
+    {"n":"Rule 110","t":2,"l":"Matthew Cook proved it universal in the 1990s. Wolfram Research’s legal action delayed publication until 2004."},
+    {"n":"Magic: The Gathering","t":2,"l":"Churchill, Biderman and Herrick, 2019. Deciding who wins a game can be undecidable.","alias":["magic the gathering","mtg","magic"]},
+    {"n":"PowerPoint","t":2,"l":"Tom Wildenhain, SIGBOVIK 2017. A Turing machine built from animations and clicks.","alias":["microsoft powerpoint"]},
+    {"n":"SQL","t":2,"l":"Recursive common table expressions, from SQL:1999, did it.","alias":["recursive cte"]},
+    {"n":"x86 mov","t":3,"l":"Stephen Dolan, 2013: \"mov is Turing-complete.\" Chris Domas then wrote a compiler that emits only movs.","alias":["mov","movfuscator"]},
+    {"n":"Dwarf Fortress","t":3,"l":"Players have built computers out of water, minecarts and dwarves."},
+    {"n":"Factorio","t":3,"l":"Its circuit network combinators are enough to build a computer."},
+    {"n":"sed","t":3,"l":"Someone wrote an arbitrary-precision calculator in it, dc.sed. Someone else wrote Sokoban."},
+    {"n":"GNU Make","t":3,"l":"Recursive $(call) and $(eval) make it a programming language whether you like it or not.","alias":["make","makefile","makefiles"]},
+    {"n":"printf","t":4,"l":"Carlini and colleagues, 2015: printf with %n is Turing complete. \"Control-Flow Bending.\"","alias":["format strings","printf format strings"]},
+    {"n":"Java generics","t":4,"l":"Radu Grigore, 2016. Type-checking Java is therefore undecidable."},
+    {"n":"Haskell type classes","t":4,"l":"With UndecidableInstances on, instance resolution can compute anything.","alias":["type classes"]},
+    {"n":"Langton's ant","t":4,"l":"Two simple rules on a grid. Shown universal in 2000.","alias":["langton ant"]},
+    {"n":"Minesweeper","t":4,"l":"Richard Kaye showed that infinite Minesweeper is Turing complete."},
+    {"n":"x86 page faults","t":5,"l":"Bangert and colleagues, 2013: the MMU computes through page faults while no instruction runs.","alias":["page faults","mmu","x86 mmu","page fault weird machine"]},
+    {"n":"DWARF","t":5,"l":"Debug info’s expression bytecode is Turing complete. Oakley and Bratus used it for exploits in 2011.","alias":["dwarf debug info","dwarf bytecode"]},
+    {"n":"Wang tiles","t":5,"l":"Robert Berger, 1966: whether a tile set can cover the plane is undecidable."},
+    {"n":"sendmail.cf","t":5,"l":"Rewrite rules powerful enough to compute anything, readable by almost no one.","alias":["sendmail","sendmail config"]}
+  ],
+  "nope": {
+    "regular expressions": "Strictly weaker, in theory. Real engines with backreferences get weird, but no.",
+    "regex": "Strictly weaker, in theory. Real engines with backreferences get weird, but no.",
+    "lambda calculus": "Turing complete on purpose. We’re after the accidents.",
+    "ethereum": "Turing complete on purpose.",
+    "brainfuck": "On purpose.",
+    "html": "HTML alone, no. HTML plus CSS, maybe.",
+    "json": "Data only."
+  },
+  "traps": [
+    {"q":"Name the cellular automaton John Conway introduced in 1970.","answer":"Conway's Game of Life"},
+    {"q":"Name the game whose redstone circuits players use to build working CPUs.","answer":"Minecraft"}
+  ]
+}

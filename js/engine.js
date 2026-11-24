@@ -333,8 +333,30 @@ export function dateForDay(day) {
   return new Date(EPOCH.y, EPOCH.m, EPOCH.d + (day - 1));
 }
 
+/** Local calendar date for a drill number, as YYYY-MM-DD. */
+export function isoForDay(day) {
+  const d = dateForDay(day);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Drill number for a YYYY-MM-DD calendar date. */
+export function dayForIso(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return dayNumber(new Date(y, m - 1, d));
+}
+
+/**
+ * Turn a published puzzle file into a plan plus the prompts it needs.
+ * Puzzle files are self-contained snapshots, so later bank edits never change a past drill.
+ */
+export function fromPuzzle(puzzle) {
+  const prompts = puzzle.prompts.map(compilePrompt);
+  const plan = [...puzzle.prompts.map((p) => ({ id: p.id })), { id: puzzle.root.id, trap: puzzle.root.trap ?? 0 }];
+  return { plan, byId: new Map(prompts.map((p) => [p.id, p])) };
+}
+
 /** Order six regular prompts plus one root prompt that calls back to one of the first three. */
-function arrange(chosen, rand) {
+export function arrangeDay(chosen, rand) {
   const withTraps = chosen.filter((p) => p.traps.length > 0);
   const target = withTraps[Math.floor(rand() * withTraps.length)];
   const trapIndex = Math.floor(rand() * target.traps.length);
@@ -365,7 +387,7 @@ export function dailyPlan(prompts, day) {
     }
     recent.push(chosen);
     if (recent.length > window) recent.shift();
-    if (d === day) plan = arrange(chosen.map((id) => byId.get(id)), rand);
+    if (d === day) plan = arrangeDay(chosen.map((id) => byId.get(id)), rand);
   }
   dailyCache.set(cacheKey, plan);
   return plan;
@@ -375,7 +397,7 @@ export function dailyPlan(prompts, day) {
 export function practicePlan(prompts, seed) {
   const rand = rng(`practice:${seed}`);
   const chosen = shuffle(prompts, rand).slice(0, REGULAR_PER_DRILL);
-  return arrange(chosen, rand);
+  return arrangeDay(chosen, rand);
 }
 
 /** Turn a plan into playable compiled prompts. */
