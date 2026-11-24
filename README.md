@@ -119,7 +119,12 @@ The result opens as a pull request with the same commands and 24-hour window (se
 2. **Let Actions open pull requests.** Settings → Actions → General → Workflow permissions: choose *Read and write permissions* and tick *Allow GitHub Actions to create and approve pull requests*.
 3. **Turn on Pages.** Settings → Pages → Source: *GitHub Actions*.
 4. **Connect Claude** for bank growth, with Workload Identity Federation instead of an API key: GitHub proves which workflow is calling, and Claude issues a token that expires within minutes, so the repository stores no secret.
-   - In the Claude Console, open the Workload identity page, click **Connect workload** and choose **GitHub Actions**. Set the subject prefix to `repo:<owner>/<repo>:ref:refs/heads/main`, the audience to `https://api.anthropic.com` and the claim `repository_owner` to your GitHub owner, so only `main` can sign in. Every Claude call runs from `main`: the schedules, manual runs, and `/reroll` and `/swap` comments.
+   - In the Claude Console, open the Workload identity page, click **Connect workload** and choose **GitHub Actions**. Give the rule exactly three conditions, so only `main` can sign in:
+     - **Subject prefix:** `repo:<owner>@<owner-id>/<repo>@<repo-id>:ref:refs/heads/main`. GitHub puts numeric IDs in the subject, so the name-only form `repo:<owner>/<repo>:…` never matches. To get it exactly, run **Check Claude sign-in** once and copy `sub` from the failed attempt in the Console's authentication history.
+     - **Audience:** `https://api.anthropic.com`.
+     - **One claim:** `repository_owner` = your GitHub owner. Don't add others, such as the workflow name, `event_name` or `ref_protected`: the daily, growth and review workflows each send different values, and a mismatched claim fails every sign-in.
+
+     Every Claude call runs from `main`: the schedules, manual runs, and `/reroll` and `/swap` comments. Pull-request runs carry a different subject and can't sign in. Skip the test workflow the wizard offers; this repository has its own.
    - Settings → Secrets and variables → Actions → **Variables**: add `ANTHROPIC_FEDERATION_RULE_ID` (`fdrl_…`), `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID` (`svac_…`) and `ANTHROPIC_WORKSPACE_ID` (`wrkspc_…`). These are IDs, not secrets. Don't also add an `ANTHROPIC_API_KEY` secret: a key takes priority over federation.
    - Run **Check Claude sign-in** from the Actions tab to test it. If it's denied, the Console's authentication history says why.
 
