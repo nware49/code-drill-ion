@@ -417,6 +417,7 @@ main { flex: 1; }
 .layer-pts b { font-family: var(--f-term); font-weight: 400; font-size: 26px; color: var(--c); letter-spacing: 0; }
 .why { margin: 40vh auto 12vh; }
 .why p { color: var(--ink-2); }
+.why .why-lede { color: var(--ink); }
 .why-note { font-size: 13px; color: var(--ink-3) !important; }
 .why .px-btn { justify-self: start; }
 
