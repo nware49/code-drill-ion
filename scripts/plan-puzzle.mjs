@@ -45,12 +45,16 @@ if (args.generate && freshCount() < config.minFreshPrompts) {
     const { createClaude } = await import('./lib/claude.mjs');
     const { growBank } = await import('./lib/grow.mjs');
     const llm = await createClaude({ model: config.model, effort: config.effort });
-    generated = await growBank({
-      llm, bank, propose: config.newPromptsWhenShort, expand: 0,
-      answersPerNewPrompt: config.growth.answersPerNewPrompt, date: now.toISOString().slice(0, 10),
-      write: !args['dry-run'], log: (m) => console.log(m),
-    });
-    bank = [...bank, ...generated.created.map((c) => c.prompt)];
+    try {
+      generated = await growBank({
+        llm, bank, propose: config.newPromptsWhenShort, expand: 0,
+        answersPerNewPrompt: config.growth.answersPerNewPrompt, date: now.toISOString().slice(0, 10),
+        write: !args['dry-run'], log: (m) => console.log(m),
+      });
+      bank = [...bank, ...generated.created.map((c) => c.prompt)];
+    } finally {
+      await llm.shutdown();
+    }
   }
 }
 

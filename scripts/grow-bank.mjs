@@ -17,33 +17,37 @@ const config = loadConfig();
 const num = (v, d) => (v === undefined ? d : Number(v));
 
 const llm = await createClaude({ model: config.model, effort: config.effort });
-const result = await growBank({
-  llm,
-  bank: loadBank().filter(isLive),
-  propose: num(args.propose, config.growth.proposePrompts),
-  expand: num(args.expand, config.growth.expandPrompts),
-  expandIds: args['expand-ids'] ? String(args['expand-ids']).split(',') : null,
-  answersPerNewPrompt: num(args.answers, config.growth.answersPerNewPrompt),
-  answersPerExpansion: num(args.add, config.growth.answersPerExpansion),
-  verify: !args['no-verify'],
-  views: !args['no-views'],
-  write: !args['dry-run'],
-  date: new Date().toISOString().slice(0, 10),
-  log: (m) => console.log(m),
-});
+try {
+  const result = await growBank({
+    llm,
+    bank: loadBank().filter(isLive),
+    propose: num(args.propose, config.growth.proposePrompts),
+    expand: num(args.expand, config.growth.expandPrompts),
+    expandIds: args['expand-ids'] ? String(args['expand-ids']).split(',') : null,
+    answersPerNewPrompt: num(args.answers, config.growth.answersPerNewPrompt),
+    answersPerExpansion: num(args.add, config.growth.answersPerExpansion),
+    verify: !args['no-verify'],
+    views: !args['no-views'],
+    write: !args['dry-run'],
+    date: new Date().toISOString().slice(0, 10),
+    log: (m) => console.log(m),
+  });
 
-console.log(`\n${result.summary}`);
-if (args.summary) writeFileSync(args.summary, `${result.summary}\n`);
-const changed = result.created.length + result.expanded.length > 0;
-if (args.body) {
-  const now = new Date();
-  const auto = config.growth.autoApprove;
-  const at = new Date(now.getTime() + config.approvalHours * 3600000);
-  writeFileSync(args.body, [
-    '## Bank growth', '', result.summary, '',
-    auto ? `**Auto-approves ${at.toUTCString().replace(' GMT', ' UTC')}** if nobody leaves feedback.` : 'Merge this pull request to add these to the bank.',
-    '', 'Comment `/approve` to merge now, `/hold` to pause auto-approval (any other comment or review also pauses it), or `/release` to restart the window. You can edit any file in `bank/prompts/` on this branch first.',
-    '', deadlineMarker(at, now), '',
-  ].join('\n'));
+  console.log(`\n${result.summary}`);
+  if (args.summary) writeFileSync(args.summary, `${result.summary}\n`);
+  const changed = result.created.length + result.expanded.length > 0;
+  if (args.body) {
+    const now = new Date();
+    const auto = config.growth.autoApprove;
+    const at = new Date(now.getTime() + config.approvalHours * 3600000);
+    writeFileSync(args.body, [
+      '## Bank growth', '', result.summary, '',
+      auto ? `**Auto-approves ${at.toUTCString().replace(' GMT', ' UTC')}** if nobody leaves feedback.` : 'Merge this pull request to add these to the bank.',
+      '', 'Comment `/approve` to merge now, `/hold` to pause auto-approval (any other comment or review also pauses it), or `/release` to restart the window. You can edit any file in `bank/prompts/` on this branch first.',
+      '', deadlineMarker(at, now), '',
+    ].join('\n'));
+  }
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `changed=${changed}\nauto_approve=${config.growth.autoApprove}\n`);
+} finally {
+  await llm.shutdown();
 }
-if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `changed=${changed}\nauto_approve=${config.growth.autoApprove}\n`);
