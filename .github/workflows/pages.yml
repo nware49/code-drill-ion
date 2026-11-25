@@ -32,6 +32,10 @@ jobs:
 
       - name: Build the site
         run: node scripts/build.mjs --site dist/site
+        env:
+          # Written into js/posthog-config.js. Without them the site deploys with analytics off.
+          PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ vars.PUBLIC_POSTHOG_PROJECT_TOKEN }}
+          PUBLIC_POSTHOG_HOST: ${{ vars.PUBLIC_POSTHOG_HOST }}
 
       - uses: actions/configure-pages@v5
 

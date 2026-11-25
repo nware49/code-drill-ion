@@ -66,54 +66,29 @@ export async function githubActionsFederation(env = process.env) {
 export async function createClaude({ model = 'claude-opus-5-5', effort = 'high', env = process.env } = {}) {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const credentials = await githubActionsFederation(env);
-  const config = env === process.env
+  const client = new Anthropic({ maxRetries: 4, ...(credentials && { credentials }) });
+  const tracer = await aiTracer(env === process.env
     ? posthogConfig(ROOT_DIR)
-    : { key: env.PUBLIC_POSTHOG_PROJECT_TOKEN, host: env.PUBLIC_POSTHOG_HOST };
-  let posthog;
-  let Client = Anthropic;
-  if (config.key && config.host) {
-    const [{ Anthropic: PostHogAnthropic }, { PostHog }] = await Promise.all([
-      import('@posthog/ai/anthropic'),
-      import('posthog-node'),
-    ]);
-    posthog = new PostHog(config.key, {
-      host: config.host,
-      privacyMode: false,
-      enableExceptionAutocapture: false,
-      requestTimeout: 3000,
-      fetchRetryCount: 0,
-    });
-    Client = PostHogAnthropic;
-  } else if (env === process.env && env.NODE_ENV !== 'production') {
-    for (const variable of [
-      !config.key && 'PUBLIC_POSTHOG_PROJECT_TOKEN',
-      !config.host && 'PUBLIC_POSTHOG_HOST',
-    ].filter(Boolean)) {
-      console.warn(`${variable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${variable} is configured`);
-    }
-  }
-  const client = new Client({ maxRetries: 4, ...(credentials && { credentials }), ...(posthog && { posthog }) });
-  const sessionId = randomUUID();
+    : { key: env.PUBLIC_POSTHOG_PROJECT_TOKEN, host: env.PUBLIC_POSTHOG_HOST });
   return {
     model,
     async json({ system, prompt, schema, maxTokens = 64000 }) {
+      const params = {
+        model,
+        max_tokens: maxTokens,
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+        output_config: { effort, format: { type: 'json_schema', schema } },
+        system,
+        messages: [{ role: 'user', content: prompt }],
+      };
+      const started = Date.now();
       let message;
       try {
-        const stream = client.beta.messages.stream({
-          model,
-          max_tokens: maxTokens,
-          betas: ['server-side-fallback-2026-07-01'],
-          fallbacks: 'default',
-          output_config: { effort, format: { type: 'json_schema', schema } },
-          system,
-          messages: [{ role: 'user', content: prompt }],
-          ...(posthog && {
-            posthogTraceId: randomUUID(),
-            posthogProperties: { $ai_session_id: sessionId },
-          }),
-        });
-        message = await stream.finalMessage();
+        message = await client.beta.messages.stream(params).finalMessage();
+        tracer?.generation({ params, started, message });
       } catch (err) {
+        tracer?.generation({ params, started, error: err });
         if (err instanceof Anthropic.AuthenticationError) {
           throw new Error('Claude API authentication failed. Check the federation variables, or the authentication history on the Workload identity page in the Claude Console (see README).');
         } else if (err instanceof Anthropic.BadRequestError) {
@@ -139,7 +114,51 @@ export async function createClaude({ model = 'claude-opus-5-5', effort = 'high',
       }
     },
     async shutdown() {
-      if (posthog) await posthog.shutdown(3000).catch(() => {});
+      await tracer?.shutdown();
     },
+  };
+}
+
+/**
+ * PostHog AI observability: one $ai_generation event per Claude call, one session per run.
+ * Captured by hand because PostHog's Anthropic wrapper only covers client.messages, not the
+ * beta API these calls use (server-side fallbacks), and on the beta API it would send its
+ * own posthogTraceId field to Claude, which rejects the request.
+ * Returns null when PostHog isn't configured.
+ */
+async function aiTracer({ key, host }) {
+  if (!key || !host) return null;
+  const { PostHog } = await import('posthog-node');
+  const posthog = new PostHog(key, { host, requestTimeout: 3000, fetchRetryCount: 0 });
+  const sessionId = randomUUID();
+  return {
+    generation({ params, started, message, error }) {
+      const traceId = randomUUID();
+      const usage = message?.usage ?? {};
+      posthog.capture({
+        distinctId: traceId,
+        event: '$ai_generation',
+        properties: {
+          $process_person_profile: false,
+          $ai_trace_id: traceId,
+          $ai_session_id: sessionId,
+          $ai_provider: 'anthropic',
+          $ai_model: message?.model ?? params.model,
+          $ai_input: [{ role: 'system', content: params.system }, ...params.messages],
+          $ai_output_choices: message ? [{ role: 'assistant', content: message.content }] : [],
+          $ai_input_tokens: usage.input_tokens,
+          $ai_output_tokens: usage.output_tokens,
+          $ai_cache_read_input_tokens: usage.cache_read_input_tokens,
+          $ai_cache_creation_input_tokens: usage.cache_creation_input_tokens,
+          $ai_max_tokens: params.max_tokens,
+          $ai_latency: (Date.now() - started) / 1000,
+          $ai_http_status: error ? (error.status ?? 0) : 200,
+          $ai_is_error: Boolean(error),
+          ...(error && { $ai_error: error.message }),
+          ...(message && { $ai_stop_reason: message.stop_reason }),
+        },
+      });
+    },
+    shutdown: () => posthog.shutdown(3000).catch(() => {}),
   };
 }

@@ -130,7 +130,8 @@ The result opens as a pull request with the same commands and 24-hour window (se
 
    Without this step, puzzles are still planned from the existing bank. For local runs, export `ANTHROPIC_API_KEY`.
 5. *(Optional)* Add a repository variable `WIKIMEDIA_USER_AGENT` with a contact address, as Wikimedia asks of API clients.
-6. *(Optional)* Branch protection that requires reviews on `main` will block the automatic merge. Leave reviews optional, or let the GitHub Actions bot bypass them.
+6. *(Optional)* **Analytics with PostHog.** Add two repository **Variables**: `PUBLIC_POSTHOG_PROJECT_TOKEN` (the project's `phc_…` token, which is public) and `PUBLIC_POSTHOG_HOST` (`https://us.i.posthog.com` or `https://eu.i.posthog.com`). The deploy writes them into the site, which then reports drill starts, prompt outcomes, completions and shares, never the answers typed. The daily and growth workflows use them to log each Claude call to PostHog's AI observability. Without them the site deploys with analytics off. For local runs, copy `.env.example` to `.env`.
+7. *(Optional)* Branch protection that requires reviews on `main` will block the automatic merge. Leave reviews optional, or let the GitHub Actions bot bypass them.
 
 The first puzzle pull request opens at the next 00:17 UTC; run **Daily puzzle** from the Actions tab to get one sooner. Settings such as the review window, the no-repeat window and the model live in `drill.config.json`.
 
@@ -154,6 +155,7 @@ styles.css                 all styling: pixel-framed panels over the world canva
 js/engine.js               game logic: matching, scoring, puzzle files, the fallback generator
 js/art.js                  procedural pixel art: the Earth column, rig, robot, creatures, depth notes, badges, wordmark
 js/app.js                  rendering, timer, storage, loading puzzles
+js/posthog.js              PostHog analytics (off unless PUBLIC_POSTHOG_* is set)
 bank/prompts/*.json        the answer bank, one prompt per file, one answer per line
 puzzles/YYYY-MM-DD.json    approved daily puzzles
 drill.config.json          review window, no-repeat window, generation settings
