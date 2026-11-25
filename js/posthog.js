@@ -5,9 +5,10 @@ const missingConfig = !config.key || !config.host;
 const pendingLogs = [];
 
 if (missingConfig) {
+  // Warn, never throw: app.js imports this module, so a throw here stops the whole game.
   if (isDevelopment) {
     const variable = !config.key ? 'PUBLIC_POSTHOG_PROJECT_TOKEN' : 'PUBLIC_POSTHOG_HOST';
-    throw new Error(`${variable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${variable} is configured`);
+    console.warn(`PostHog is off: ${variable} is not set (see .env.example). The game works without it.`);
   }
 } else {
   window.posthog = window.posthog || [];
