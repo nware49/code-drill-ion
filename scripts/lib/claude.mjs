@@ -5,6 +5,10 @@
 // Workload Identity Federation. In GitHub Actions, federation trades a GitHub OIDC token
 // for a short-lived Anthropic token, so the repository stores no API key.
 
+import { randomUUID } from 'node:crypto';
+import { ROOT_DIR } from './bank.mjs';
+import { posthogConfig } from './posthog-config.mjs';
+
 const ANTHROPIC_AUDIENCE = 'https://api.anthropic.com';
 const isSet = (value) => Boolean(value?.trim());
 
@@ -62,7 +66,34 @@ export async function githubActionsFederation(env = process.env) {
 export async function createClaude({ model = 'claude-opus-5-5', effort = 'high', env = process.env } = {}) {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const credentials = await githubActionsFederation(env);
-  const client = new Anthropic({ maxRetries: 4, ...(credentials && { credentials }) });
+  const config = env === process.env
+    ? posthogConfig(ROOT_DIR)
+    : { key: env.PUBLIC_POSTHOG_PROJECT_TOKEN, host: env.PUBLIC_POSTHOG_HOST };
+  let posthog;
+  let Client = Anthropic;
+  if (config.key && config.host) {
+    const [{ Anthropic: PostHogAnthropic }, { PostHog }] = await Promise.all([
+      import('@posthog/ai/anthropic'),
+      import('posthog-node'),
+    ]);
+    posthog = new PostHog(config.key, {
+      host: config.host,
+      privacyMode: false,
+      enableExceptionAutocapture: false,
+      requestTimeout: 3000,
+      fetchRetryCount: 0,
+    });
+    Client = PostHogAnthropic;
+  } else if (env === process.env && env.NODE_ENV !== 'production') {
+    for (const variable of [
+      !config.key && 'PUBLIC_POSTHOG_PROJECT_TOKEN',
+      !config.host && 'PUBLIC_POSTHOG_HOST',
+    ].filter(Boolean)) {
+      console.warn(`${variable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${variable} is configured`);
+    }
+  }
+  const client = new Client({ maxRetries: 4, ...(credentials && { credentials }), ...(posthog && { posthog }) });
+  const sessionId = randomUUID();
   return {
     model,
     async json({ system, prompt, schema, maxTokens = 64000 }) {
@@ -76,6 +107,10 @@ export async function createClaude({ model = 'claude-opus-5-5', effort = 'high',
           output_config: { effort, format: { type: 'json_schema', schema } },
           system,
           messages: [{ role: 'user', content: prompt }],
+          ...(posthog && {
+            posthogTraceId: randomUUID(),
+            posthogProperties: { $ai_session_id: sessionId },
+          }),
         });
         message = await stream.finalMessage();
       } catch (err) {
@@ -102,6 +137,9 @@ export async function createClaude({ model = 'claude-opus-5-5', effort = 'high',
       } catch {
         throw new Error('Claude returned text that is not valid JSON.');
       }
+    },
+    async shutdown() {
+      if (posthog) await posthog.shutdown(3000).catch(() => {});
     },
   };
 }

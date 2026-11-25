@@ -1,4 +1,5 @@
 // code drillion: browser UI. All game rules live in engine.js; this file renders and keeps state.
+import { gameLogger, posthog } from './posthog.js';
 import {
   TIERS, ROOT, MAX_DEPTH, compilePrompt, judge, pointsFor, dailyPlan, practicePlan, materialize,
   dayNumber, dateForDay, hex, rankFor, depthOf, shareText, rng, shuffle, autocompleteDepth,
@@ -106,6 +107,17 @@ function newRecord(mode, day, plan, seed, source = 'generated') {
   return { mode, day, seed, plan, source, idx: 0, results: [], spent: [], deadline: null, seconds: secondsPerPrompt(), phase: 'answer', startedAt: Date.now() };
 }
 
+function captureDrillStarted(record) {
+  const attributes = {
+    drill_mode: record.mode,
+    drill_source: record.source,
+    prompt_count: record.plan.length,
+    extended_timer_enabled: store.settings.extended,
+  };
+  posthog.capture('drill_started', attributes);
+  gameLogger.info('drill started', attributes);
+}
+
 async function attach(record) {
   try {
     const puzzle = record.source === 'puzzle' ? await loadPuzzle(record.day) : null;
@@ -142,6 +154,7 @@ async function startDaily() {
     store.days[day] = rec;
     if (!(await attach(rec))) throw new Error('drill unavailable');
     persist();
+    captureDrillStarted(rec);
   }
   enter();
 }
@@ -155,6 +168,7 @@ async function startArchive(day) {
     store.archive[day] = rec;
     if (!(await attach(rec))) throw new Error('drill unavailable');
     persist();
+    captureDrillStarted(rec);
   }
   enter();
 }
@@ -166,6 +180,7 @@ async function startPractice() {
   store.practice = rec;
   await attach(rec);
   persist();
+  captureDrillStarted(rec);
   enter();
 }
 
@@ -386,6 +401,17 @@ function resolvePrompt(kind, answer, extra = {}) {
   game.phase = 'reveal';
   game.deadline = null;
   persist();
+  const attributes = {
+    drill_mode: game.mode,
+    prompt_number: game.idx + 1,
+    prompt_category: prompt.cat,
+    outcome: result.status,
+    points: result.pts,
+    answer_tier: result.tier ?? 'none',
+    seconds_remaining: Math.ceil(result.left / 1000),
+  };
+  posthog.capture('prompt_resolved', attributes);
+  gameLogger.info('drill prompt resolved', attributes);
   renderPlay();
   if (result.status === 'hit') {
     world?.float(`+${result.pts}<small>${esc(tierName(result.tier))}</small>`, result.tier === 'root' ? 'root' : '');
@@ -402,6 +428,18 @@ function nextPrompt() {
     game.phase = 'done';
     game.finishedAt = Date.now();
     persist();
+    const totalPoints = depthOf(game.results);
+    const attributes = {
+      drill_mode: game.mode,
+      drill_source: game.source,
+      prompt_count: items.length,
+      correct_prompt_count: game.results.filter((result) => result?.status === 'hit').length,
+      total_points: totalPoints,
+      rank: rankFor(totalPoints).title,
+      duration_seconds: Math.round((game.finishedAt - game.startedAt) / 1000),
+    };
+    posthog.capture('drill_completed', attributes);
+    gameLogger.info('drill completed', attributes);
     showResults();
     return;
   }
@@ -649,6 +687,10 @@ async function copyShare() {
   try {
     await navigator.clipboard.writeText(text);
     status.textContent = 'Copied to clipboard.';
+    posthog.capture('share_copied', {
+      drill_mode: game?.mode,
+      total_points: game ? depthOf(game.results) : undefined,
+    });
   } catch {
     const range = document.createRange();
     range.selectNodeContents($('share-text'));
@@ -784,6 +826,10 @@ function wire() {
   $('opt-extended').addEventListener('change', (e) => {
     store.settings.extended = e.target.checked;
     persist();
+    posthog.capture('extended_timer_changed', {
+      extended_timer_enabled: store.settings.extended,
+      seconds_per_prompt: secondsPerPrompt(),
+    });
   });
   $('archive').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-archive]');

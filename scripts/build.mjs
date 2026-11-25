@@ -8,10 +8,11 @@ import { join } from 'node:path';
 import { loadBank, bankForClient, loadPuzzleFiles, ROOT_DIR } from './lib/bank.mjs';
 import { addDays } from './lib/planner.mjs';
 import { parseArgs } from './lib/config.mjs';
+import { posthogConfigScript } from './lib/posthog-config.mjs';
 
 const args = parseArgs();
 const read = (p) => readFileSync(join(ROOT_DIR, p), 'utf8');
-const MODULES = ['js/engine.js', 'js/art.js', 'js/app.js'];
+const MODULES = ['js/posthog.js', 'js/engine.js', 'js/art.js', 'js/app.js'];
 
 const cutoff = addDays(new Date().toISOString().slice(0, 10), 1);
 const bank = bankForClient(loadBank());
@@ -25,6 +26,7 @@ if (args.site) {
   mkdirSync(join(out, 'bank'), { recursive: true });
   mkdirSync(join(out, 'puzzles'), { recursive: true });
   for (const f of ['index.html', 'styles.css', ...MODULES]) copyFileSync(join(ROOT_DIR, f), join(out, f));
+  writeFileSync(join(out, 'js', 'posthog-config.js'), posthogConfigScript(ROOT_DIR));
   writeFileSync(join(out, 'bank', 'bank.json'), JSON.stringify(bank));
   for (const p of puzzles) writeFileSync(join(out, 'puzzles', `${p.date}.json`), JSON.stringify(p));
   writeFileSync(join(out, '.nojekyll'), '');
@@ -43,10 +45,12 @@ if (args.site) {
     .replace(new RegExp(String.fromCharCode(0x2028), 'g'), `${'\\'}u2028`)
     .replace(new RegExp(String.fromCharCode(0x2029), 'g'), `${'\\'}u2029`);
   const data = `<script>window.DRILL_DATA = ${safeJson({ bank, puzzles: Object.fromEntries(puzzles.map((p) => [p.date, p])) })};</script>`;
+  const posthogData = `<script>${posthogConfigScript(ROOT_DIR)}</script>`;
 
   const css = read('styles.css');
   const page = read('index.html')
     .replace('<link rel="stylesheet" href="styles.css">', () => `<style>\n${css}</style>`)
+    .replace('<script src="js/posthog-config.js"></script>', posthogData)
     .replace('<script type="module" src="js/app.js"></script>', () => `${data}\n<script type="module">\n${js}</script>`);
   if (page.includes('src="js/') || page.includes('href="styles.css"')) throw new Error('an external reference survived bundling');
 
