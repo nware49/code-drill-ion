@@ -5,7 +5,7 @@ import { validateBank, validatePrompt, validatePuzzle } from '../scripts/lib/val
 import { planPuzzle, usageFrom, gapFor, addDays, daysBetween } from '../scripts/lib/planner.mjs';
 import { collectHistory } from '../scripts/lib/history.mjs';
 import { parseCommand, decideScheduled, decideEvent, readDeadline, withDeadline, deadlineMarker } from '../scripts/lib/review.mjs';
-import { tierForViews, retier, fetchViews } from '../scripts/lib/pageviews.mjs';
+import { retier, fetchViews, resolveTitles, addViews } from '../scripts/lib/pageviews.mjs';
 import { growBank } from '../scripts/lib/grow.mjs';
 import { mergeAnswers, repairPrompt } from '../scripts/lib/generate.mjs';
 import { fromPuzzle, materialize, judge, compilePrompt } from '../js/engine.js';
@@ -216,21 +216,51 @@ test('events map to actions', () => {
 
 /* ---------------- rarity from pageviews ---------------- */
 
-test('pageview tiers and blending', async () => {
-  assert.equal(tierForViews(5e6), 0);
-  assert.equal(tierForViews(100000), 2);
-  assert.equal(tierForViews(10), 5);
-  const p = { answers: [
+// Real yearly views (Nov 2026) for answers to "Name a computer bus or wired hardware interface."
+// None reaches a million, which is what fixed cutoffs needed for topsoil.
+const busAnswers = () => [
+  { n: 'HDMI', t: 0, views: 436680 }, { n: 'USB', t: 0, views: 422564 },
+  { n: 'PCI Express', t: 1, views: 383091 }, { n: 'Ethernet', t: 1, views: 225894 },
+  { n: 'SATA', t: 2, views: 153259 }, { n: 'Serial port', t: 2, views: 64085 },
+  { n: 'I²C', t: 3, views: 24654 }, { n: 'SPI', t: 4, views: 9000 },
+  { n: 'GPIB', t: 5, views: 3100 },
+].map((a) => ({ ...a, l: 'x', src: 'llm' }));
+
+test('famous answers keep topsoil though no answer has a million views', () => {
+  const r = retier({ answers: busAnswers() }).answers;
+  assert.deepEqual(r.map((a) => a.t), [0, 0, 1, 1, 2, 2, 3, 4, 5]);
+});
+
+test('pageviews reorder answers within the tiers Claude used; ties go to Claude', () => {
+  const r = retier({ answers: [
     { n: 'Hand', t: 3, l: 'x' },
-    { n: 'Big', t: 2, l: 'x', src: 'llm', views: 2e6 },
-    { n: 'Small', t: 3, l: 'x', src: 'llm', views: 50 },
-    { n: 'NoViews', t: 4, l: 'x', src: 'llm' },
-  ] };
-  const r = retier(p).answers;
-  assert.deepEqual(r.map((a) => a.t), [3, 1, 4, 4]);
-  const views = fakeFetch({ Quicksort: 1234 });
-  assert.equal(await fetchViews('Quicksort', { fetchImpl: views }), 1234);
-  assert.equal(await fetchViews('Nope', { fetchImpl: views }), 0);
+    { n: 'Hyped', t: 0, l: 'x', src: 'llm', views: 50 },
+    { n: 'Famous', t: 4, l: 'x', src: 'llm', views: 2e5 },
+    { n: 'Middle', t: 1, l: 'x', src: 'llm', views: 1e4 },
+    { n: 'NoViews', t: 5, l: 'x', src: 'llm' },
+    { n: 'Classic', t: 0, l: 'x', src: 'llm', views: 3e5 },
+  ] }).answers;
+  // Views rank Classic, Famous, Middle, Hyped into Claude's tiers 0, 0, 1, 4. Blends: Classic
+  // stays 0, Famous (4+0)/2 = 2, Middle stays 1, Hyped (0+4)/2 = 2. Hand-ranked and view-less
+  // answers are untouched.
+  assert.deepEqual(r.map((a) => [a.n, a.t]), [['Hand', 3], ['Hyped', 2], ['Famous', 2], ['Middle', 1], ['NoViews', 5], ['Classic', 0]]);
+  const tie = retier({ answers: [
+    { n: 'A', t: 0, l: 'x', src: 'llm', views: 10 },
+    { n: 'B', t: 1, l: 'x', src: 'llm', views: 20 },
+  ] }).answers;
+  assert.deepEqual(tie.map((a) => a.t), [0, 1], 'a half-tier disagreement keeps Claude’s tier');
+});
+
+test('blending never empties topsoil or the inner core that Claude filled', () => {
+  const r = retier({ answers: [
+    { n: 'Claimed', t: 0, l: 'x', src: 'llm', views: 100 },
+    { n: 'Rare', t: 3, l: 'x', src: 'llm', views: 9e5 },
+    { n: 'Odd', t: 5, l: 'x', src: 'llm', views: 8e5 },
+    { n: 'Low', t: 3, l: 'x', src: 'llm', views: 10 },
+  ] }).answers;
+  // Blends: Claimed 1, Rare 2, Odd 4, Low 4, so nothing is left in tiers 0 or 5. The closest
+  // answer moves to each: Claimed to topsoil, and of the two at 4, the less-viewed Low to the core.
+  assert.deepEqual(r.map((a) => [a.n, a.t]), [['Claimed', 0], ['Rare', 2], ['Odd', 4], ['Low', 5]]);
 });
 
 test('generated topsoil answers are capped at four', () => {
@@ -239,11 +269,39 @@ test('generated topsoil answers are capped at four', () => {
   assert.equal(r.filter((a) => a.t === 0).length, 4);
 });
 
+test('views come from the article a title redirects to; missing articles are ignored', async () => {
+  const fetchImpl = fakeFetch({ USB: 422564, 'PCI Express': 383091, 'Universal Serial Bus': 13455 }, {
+    redirects: { 'Universal Serial Bus': 'USB', PCIe: 'PCI Express' },
+    missing: ['Made-up bus'],
+  });
+  assert.equal(await fetchViews('USB', { fetchImpl }), 422564);
+  assert.equal(await fetchViews('Nope', { fetchImpl }), null, 'no article means no data, not zero views');
+  const resolved = await resolveTitles(['Universal_Serial_Bus', 'PCIe', 'USB', 'Made-up bus'], { fetchImpl });
+  assert.deepEqual(Object.fromEntries(resolved), { Universal_Serial_Bus: 'USB', PCIe: 'PCI Express', USB: 'USB', 'Made-up bus': null });
+
+  const answers = [
+    { n: 'USB', t: 0, src: 'llm', wiki: 'Universal Serial Bus' },
+    { n: 'PCIe', t: 1, src: 'llm', wiki: 'PCIe' },
+    { n: 'Made-up bus', t: 5, src: 'llm', wiki: 'Made-up bus' },
+  ];
+  const stats = await addViews(answers, { fetchImpl });
+  assert.deepEqual(stats, { found: 2, redirected: 2, missing: 1, unchecked: 0 });
+  assert.deepEqual(answers.map((a) => [a.wiki, a.views]), [['USB', 422564], ['PCI Express', 383091], [undefined, undefined]]);
+});
+
+test('when the title lookup fails, titles are used as given', async () => {
+  const fetchImpl = fakeFetch({ USB: 422564 }, { failLookup: true });
+  const answers = [{ n: 'USB', t: 0, src: 'llm', wiki: 'USB' }, { n: 'Gone', t: 5, src: 'llm', wiki: 'Gone' }];
+  const stats = await addViews(answers, { fetchImpl });
+  assert.deepEqual(stats, { found: 1, redirected: 0, missing: 0, unchecked: 2 });
+  assert.deepEqual(answers.map((a) => a.views), [422564, undefined]);
+});
+
 /* ---------------- generation (fake Claude) ---------------- */
 
 test('a growth run fact-checks, repairs and validates before writing', async () => {
   const llm = fakeLLM({ invalid: ['Juliett'], badLore: ['Kilo'] });
-  const r = await growBank({ llm, bank: BANK, propose: 1, expandIds: ['sorting'], answersPerExpansion: 4, write: false, date: '2026-12-01', fetchImpl: fakeFetch({ Alpha: 3e6 }) });
+  const r = await growBank({ llm, bank: BANK, propose: 1, expandIds: ['sorting'], answersPerExpansion: 4, write: false, date: '2026-12-01', fetchImpl: fakeFetch({ Alpha: 4e5, Bravo: 3e5, Charlie: 9e4, Echo: 2e4, Oscar: 900 }) });
   assert.equal(r.rejected.length, 0);
   const created = r.created[0].prompt;
   assert.deepEqual(validatePrompt(created), []);

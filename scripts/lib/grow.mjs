@@ -20,8 +20,8 @@ export async function growBank(o) {
   const finish = async (prompt) => {
     let p = prompt;
     if (o.views !== false) {
-      const n = await addViews(p.answers.filter((a) => a.src), { fetchImpl: o.fetchImpl });
-      log(`  pageviews found for ${n} answers`);
+      const s = await addViews(p.answers.filter((a) => a.src), { fetchImpl: o.fetchImpl });
+      log(`  pageviews found for ${s.found} answers (${s.redirected} redirect titles followed, ${s.missing} with no article, ${s.unchecked} titles unchecked)`);
       p = retier(p);
     }
     return p;

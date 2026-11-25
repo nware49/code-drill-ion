@@ -26,8 +26,21 @@ export function fakeLLM({ invalid = [], badLore = [] } = {}) {
   };
 }
 
-export const fakeFetch = (views = {}) => async (url) => {
-  const title = decodeURIComponent(url.split('/user/')[1].split('/')[0]);
+// A stand-in for Wikipedia: pageviews per exact title (other titles 404), and a title lookup
+// where every title is an article except those in `missing`, and `redirects` map one to another.
+// `failLookup` makes the title lookup fail as if rate limited.
+export const fakeFetch = (views = {}, { redirects = {}, missing = [], failLookup = false } = {}) => async (url) => {
+  if (url.includes('/w/api.php')) {
+    if (failLookup) return { status: 403, ok: false };
+    const titles = new URL(url).searchParams.get('titles').split('|');
+    const normalize = (t) => t.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+    const normalized = titles.filter((t) => normalize(t) !== t).map((t) => ({ from: t, to: normalize(t) }));
+    const names = titles.map(normalize);
+    const redirected = names.filter((t) => t in redirects).map((t) => ({ from: t, to: redirects[t] }));
+    const pages = [...new Set(names.map((t) => redirects[t] ?? t))].map((t) => (missing.includes(t) ? { title: t, missing: true } : { title: t, pageid: 1 }));
+    return { status: 200, ok: true, json: async () => ({ query: { normalized, redirects: redirected, pages } }) };
+  }
+  const title = decodeURIComponent(url.split('/user/')[1].split('/')[0]).replace(/_/g, ' ');
   if (!(title in views)) return { status: 404, ok: false };
   return { status: 200, ok: true, json: async () => ({ items: [{ views: views[title] }] }) };
 };
